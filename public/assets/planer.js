@@ -119,7 +119,7 @@ function buildSummary(){
     total:ev.total, hours:ev.hours,
     roles:Object.fromEntries(ROLES.map(([r])=>[r, st.roles[r]?name(st.roles[r]):''])),
     pkForm:st.pkForm==='bll'?'Besondere Lernleistung':'Präsentationsprüfung', pkField:st.pkForm==='bll'?'BLL_0':'Praesentation_0',
-    sems:perSem, checks,
+    sems:perSem, checks, fieldKeys:checks.map(c=>TEMPLATE_KEYS().get(c)).filter(Boolean),
   };
 }
 
@@ -835,6 +835,23 @@ function mapFormFields(fieldNames){
   return map;
 }
 
+// Die Kurs-Nummern in den Feldnamen ändern sich je Jahrgang. Ein Feld wird deshalb über
+// Fach | Kursart | Rang der Kurs-Nummer innerhalb des Fachs | Spalte wiedererkannt.
+function fieldKeys(names){
+  const groups={}, parts=n=>{ const p=n.split('$'); return p.length===5 ? p : null; };
+  names.forEach(n=>{ const p=parts(n); if(!p) return; const g=p[0]+'|'+(p[1]==='-10'?'z':'reg'); (groups[g]=groups[g]||new Set()).add(+p[3]); });
+  const sorted=Object.fromEntries(Object.entries(groups).map(([g,set])=>[g,[...set].sort((a,b)=>a-b)]));
+  const out=new Map();
+  names.forEach(n=>{ const p=parts(n); if(!p) return; const g=p[0]+'|'+(p[1]==='-10'?'z':'reg'); out.set(n, `${g}|${sorted[g].indexOf(+p[3])}|${p[4]}`); });
+  return out;
+}
+const TEMPLATE_KEYS = lazy(()=>fieldKeys(Object.keys(FORM_TPL.checkboxes)));
+// Feldnamen der Vorlage → Feldnamen einer konkreten Schul-PDF
+function translateChecks(checks, pdfNames){
+  const byKey=new Map([...fieldKeys(pdfNames)].map(([n,k])=>[k,n]));
+  return checks.map(c=>{ const k=TEMPLATE_KEYS().get(c); return (k && byKey.get(k)) || c; });
+}
+
 // Liefert die anzukreuzenden Zellen als [planerId, Spalte, Beschriftung]
 function formWants(st, h){
   const out=[];
@@ -1139,15 +1156,26 @@ function splitSchoolPdf(bytes){
 }
 
 // Setzt in der eigenen Schul-PDF genau die gewünschten Kreuze und die Form der 5. PK; alles andere bleibt byte-gleich
+// Kontrollkästchen der PDF: Objektnummer → Feldname
+function checkboxFields(P){
+  const out=new Map();
+  P.objs.forEach(({n})=>{
+    const t=P.text.get(n);
+    if(!t.includes('/FT /Btn') || t.includes('/Kids') || t.includes('/Parent ')) return;
+    const m=/\/T <([0-9A-F]+)>/.exec(t); if(m) out.set(n, utf16FromHex(m[1]));
+  });
+  return out;
+}
 function patchSchoolPdf(bytes, checks, pk){
-  const P=splitSchoolPdf(bytes), want=new Set(checks), changed=new Map(), found=new Set();
+  const P=splitSchoolPdf(bytes), boxes=checkboxFields(P), changed=new Map(), found=new Set();
+  checks=translateChecks(checks, [...boxes.values()]);
+  const want=new Set(checks);
   let radioParent=null;
   P.objs.forEach(({n})=>{
     const t=P.text.get(n);
-    if(/\/FT \/Btn \/Kids \d+ 0 R \/T </.test(t)){ radioParent=n; changed.set(n, t.replace(/\/V \/\S+/, '/V /'+pdfName(pk))); return; }
-    const m=/\/FT \/Btn \/T <([0-9A-F]+)>/.exec(t);
-    if(!m) return;
-    const name=utf16FromHex(m[1]), on=want.has(name); if(on) found.add(name);
+    if(t.includes('/FT /Btn') && t.includes('/Kids')){ radioParent=n; changed.set(n, t.replace(/\/V \/\S+/, '/V /'+pdfName(pk))); return; }
+    if(!boxes.has(n)) return;
+    const name=boxes.get(n), on=want.has(name); if(on) found.add(name);
     const v=on?'/Yes':'/Off';
     changed.set(n, t.replace(/\/AS \/(Yes|Off)/, '/AS '+v).replace(/\/V \/(Yes|Off)/, '/V '+v));
   });
@@ -1200,14 +1228,15 @@ async function readSchoolPdf(bytes){
     name:after('Name: '), klasse:after('Klasse: '), jahrgang:after('Jahrgang: ').replace(/,\s*GYM_SEK_II$/,''),
     schuelerId:field('SchuelerId'), jahrgangId:field('AbiturJahrgangId'),
     pdfCreatedAt: dp ? `${dp[1]}-${dp[2]}-${dp[3]} ${dp[4]}:${dp[5]}:00` : null,
-    checks:[...s.matchAll(/\/FT \/Btn \/T <([0-9A-F]+)> \/V \/Yes/g)].map(m=>utf16FromHex(m[1])),
+    names:[...checkboxFields(P).values()],
+    checks:[...checkboxFields(P)].filter(([n])=>/\/V \/Yes/.test(P.text.get(n))).map(([,name])=>name),
     pk:(/\/Ff 49152 \/V \/(\S+)/.exec(s)||[,''])[1].replace(/#([0-9A-F]{2})/g,(_,h)=>String.fromCharCode(parseInt(h,16))),
   };
 }
 
 // Kreuze aus einem Formular zurück in den Planer übernehmen (Sportkurse lassen sich nicht ablesen)
-function applyFormChecks(checks, pk){
-  const names=Object.keys(FORM_TPL.checkboxes), map=mapFormFields(names), rev={};
+function applyFormChecks(checks, pk, pdfNames){
+  const names=pdfNames&&pdfNames.length ? pdfNames : Object.keys(FORM_TPL.checkboxes), map=mapFormFields(names), rev={};
   Object.entries(map).forEach(([id,prefix])=>{ rev[prefix]=id; });
   const roleOf=Object.fromEntries(Object.entries(ROLE_COL).map(([r,c])=>[c,r]));
   st.roles={lk1:null,lk2:null,pf3:null,pf4:null,pk5:null}; st.sem={}; st.zusatz={};
@@ -1320,7 +1349,7 @@ function setupAccountBar(){
     localProfile={name:info.name, klasse:info.klasse, jahrgang:info.jahrgang, schuelerId:info.schuelerId, jahrgangId:info.jahrgangId, pdfCreatedAt:info.pdfCreatedAt};
     lsSet(LOCAL_PDF_KEY, JSON.stringify(localProfile));
     clearTimeout(saveTimer); dirty=false;
-    const sportOpen = info.checks.length ? applyFormChecks(info.checks, info.pk) : false;
+    const sportOpen = info.checks.length ? applyFormChecks(info.checks, info.pk, info.names) : false;
     rm.hidden=false; setSync('local');
     syncControls(); update();
     showIo('Eigene PDF übernommen.'+(sportOpen?' Wähle bitte deine Sportkurse im Planer – die lassen sich aus der PDF nicht ablesen.':''), sportOpen?'warn':'ok');
@@ -1546,7 +1575,7 @@ function wzAllowed(id, d, p){
     return wzProjErrors(wzComplete(t, idx+1))===0;
   });
 }
-const lazy = fn => { let v; return () => v===undefined ? (v=fn()) : v; };
+function lazy(fn){ let v; return () => v===undefined ? (v=fn()) : v; }
 
 function wzCandidates(d){
   return withState(d, ()=>{

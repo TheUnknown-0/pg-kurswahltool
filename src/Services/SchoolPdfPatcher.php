@@ -15,9 +15,11 @@ final class SchoolPdfPatcher
     /**
      * @param list<string> $checks Feldnamen der anzukreuzenden Kästchen
      * @param string $pk 'Praesentation_0' oder 'BLL_0'
+     * @param list<string>|null $keys statt $checks: Feldschlüssel „Fach|Kursart|Rang|Spalte“ (unabhängig von
+     *                                den Kurs-Nummern des Jahrgangs, siehe fieldKeys() in planer.js)
      * @throws \RuntimeException wenn die PDF nicht den erwarteten Aufbau hat oder Felder fehlen
      */
-    public static function patch(string $pdf, array $checks, string $pk): string
+    public static function patch(string $pdf, array $checks, string $pk, ?array $keys = null): string
     {
         if (!str_starts_with($pdf, '%PDF-') || !preg_match('/\r\n\d+ 0 obj\r\n/', $pdf, $m, PREG_OFFSET_CAPTURE)) {
             throw new \RuntimeException('Keine Kurswahl-PDF des Schulservers.');
@@ -60,21 +62,38 @@ final class SchoolPdfPatcher
             $text[$o['n']] = substr($pdf, $o['start'], $o['end'] - $o['start']);
         }
 
+        // Kontrollkästchen: Objektnummer → Feldname
+        $boxes = [];
+        foreach ($objs as $o) {
+            $t = $text[$o['n']];
+            if (str_contains($t, '/FT /Btn') && !str_contains($t, '/Kids') && !str_contains($t, '/Parent ')
+                && preg_match('/\/T <([0-9A-F]+)>/', $t, $bm)) {
+                $boxes[$o['n']] = self::utf16FromHex($bm[1]);
+            }
+        }
+        if ($keys !== null) {
+            $byKey = array_flip(self::fieldKeys(array_values($boxes)));
+            $checks = [];
+            foreach ($keys as $k) {
+                $checks[] = $byKey[$k] ?? $k;
+            }
+        }
+
         $want = array_flip($checks);
         $changed = [];
         $found = [];
         $radioParent = null;
         foreach ($objs as $o) {
             $t = $text[$o['n']];
-            if (preg_match('/\/FT \/Btn \/Kids \d+ 0 R \/T </', $t)) {
+            if (str_contains($t, '/FT /Btn') && str_contains($t, '/Kids')) {
                 $radioParent = $o['n'];
                 $changed[$o['n']] = (string) preg_replace('/\/V \/\S+/', '/V /' . self::pdfName($pk), $t, 1);
                 continue;
             }
-            if (!preg_match('/\/FT \/Btn \/T <([0-9A-F]+)>/', $t, $bm)) {
+            if (!isset($boxes[$o['n']])) {
                 continue;
             }
-            $name = self::utf16FromHex($bm[1]);
+            $name = $boxes[$o['n']];
             $on = isset($want[$name]);
             if ($on) {
                 $found[$name] = true;
@@ -119,6 +138,39 @@ final class SchoolPdfPatcher
         }
 
         return $out . $xref . $trailer . 'startxref' . "\r\n" . strlen($out) . "\r\n%%EOF\r\n";
+    }
+
+    /**
+     * Feldname → „Fach|Kursart|Rang|Spalte“; Rang = Position der Kurs-Nummer innerhalb von Fach und Kursart.
+     *
+     * @param list<string> $names
+     * @return array<string, string>
+     */
+    public static function fieldKeys(array $names): array
+    {
+        $groups = [];
+        $parsed = [];
+        foreach ($names as $n) {
+            $p = explode('$', $n);
+            if (count($p) !== 5) {
+                continue;
+            }
+            $g = $p[0] . '|' . ($p[1] === '-10' ? 'z' : 'reg');
+            $groups[$g][(int) $p[3]] = true;
+            $parsed[$n] = [$g, (int) $p[3], $p[4]];
+        }
+        $rank = [];
+        foreach ($groups as $g => $ids) {
+            $ids = array_keys($ids);
+            sort($ids);
+            $rank[$g] = array_flip($ids);
+        }
+        $out = [];
+        foreach ($parsed as $n => [$g, $id, $col]) {
+            $out[$n] = "{$g}|{$rank[$g][$id]}|{$col}";
+        }
+
+        return $out;
     }
 
     private static function pdfName(string $s): string

@@ -436,7 +436,9 @@ final class AdminController extends Controller
         }
         $pk = ($sum['pkField'] ?? '') === 'BLL_0' ? 'BLL_0' : 'Praesentation_0';
 
-        return [SchoolPdfPatcher::patch((string) $r['pdf'], array_values(array_map('strval', $sum['checks'])), $pk), null];
+        $keys = is_array($sum['fieldKeys'] ?? null) ? array_values(array_map('strval', $sum['fieldKeys'])) : null;
+
+        return [SchoolPdfPatcher::patch((string) $r['pdf'], array_values(array_map('strval', $sum['checks'])), $pk, $keys), null];
     }
 
     /** @return array<string, mixed> */
