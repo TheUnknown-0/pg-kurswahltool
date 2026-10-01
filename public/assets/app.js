@@ -16,7 +16,7 @@ document.querySelectorAll('form[data-confirm]').forEach(f => {
       const r = await fetch(box.dataset.url, {headers: {Accept: 'application/json'}, credentials: 'same-origin'});
       if (!r.ok) return;
       const s = await r.json();
-      ['students', 'with_pdf', 'unassigned', 'saved'].forEach(k => { const el = box.querySelector(`[data-k="${k}"]`); if (el) el.textContent = s[k]; });
+      ['students', 'with_pdf', 'unassigned', 'saved', 'submitted'].forEach(k => { const el = box.querySelector(`[data-k="${k}"]`); if (el) el.textContent = s[k]; });
       box.querySelector('[data-k="queue"]').textContent = s.queue + s.folder;
       const w = document.getElementById('worker');
       w.className = 'msg small ' + (s.worker_ok ? 'ok' : 'warn');

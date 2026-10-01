@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\HttpException;
+use App\Services\Deadline;
 use App\Services\LoginName;
+use App\Services\PlanerPage;
+use App\Services\SchoolPdfPatcher;
 use App\Services\PdfImporter;
 use App\Services\UserImport;
 
@@ -33,10 +36,17 @@ final class AdminController extends Controller
             $where .= ' AND p.id IS NULL';
         } elseif ($filter === 'ohne-wahl') {
             $where .= ' AND s.user_id IS NULL';
+        } elseif ($filter === 'abgegeben') {
+            $where .= ' AND s.submitted_at IS NOT NULL';
+        } elseif ($filter === 'nicht-abgegeben') {
+            $where .= ' AND s.submitted_at IS NULL';
+        } elseif ($filter === 'fehler') {
+            $where .= " AND JSON_VALUE(s.summary, '$.errors') > 0";
         }
         $students = $db->fetchAll(
             "SELECT u.id, u.login, u.display_name, u.last_login_at, p.id AS pdf_id, p.name AS pdf_name, p.klasse,
-                    p.schueler_id, s.updated_at AS saved_at
+                    p.schueler_id, s.updated_at AS saved_at, s.submitted_at,
+                    JSON_VALUE(s.summary, '$.errors') AS errors
              FROM users u
              LEFT JOIN school_pdfs p ON p.user_id = u.id AND p.active = 1
              LEFT JOIN selections s ON s.user_id = u.id
@@ -55,6 +65,8 @@ final class AdminController extends Controller
             'studentOptions' => $db->fetchAll("SELECT id, login FROM users WHERE role = 'student' ORDER BY login"),
             'log' => $db->fetchAll('SELECT source, filename, status, message, created_at FROM import_log ORDER BY id DESC LIMIT 100'),
             'flashes' => $this->ctx->session->pullFlashes(),
+            'deadline' => (new Deadline($db))->settings(),
+            'deadlineModes' => Deadline::MODES,
             'q' => $q,
             'filter' => $filter,
         ]);
@@ -233,6 +245,200 @@ final class AdminController extends Controller
         return (string) $row['pdf'];
     }
 
+    public function saveSettings(): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $this->verifyCsrf();
+        $raw = trim((string) ($_POST['deadline'] ?? ''));
+        $mode = (string) ($_POST['mode'] ?? 'readonly');
+        $deadline = null;
+        if ($raw !== '') {
+            $dt = \DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $raw);
+            if ($dt === false) {
+                $this->ctx->session->flash('error', 'Ungültiges Datum.');
+
+                return $this->redirect('/admin');
+            }
+            $deadline = $dt->format('Y-m-d H:i:00');
+        }
+        if (!isset(Deadline::MODES[$mode])) {
+            throw new HttpException(400);
+        }
+        (new Deadline($this->ctx->db))->save($deadline, $mode);
+        $this->ctx->session->flash('ok', $deadline === null ? 'Abgabefrist entfernt.' : 'Abgabefrist gespeichert: ' . date('d.m.Y H:i', (int) strtotime($deadline)) . ' Uhr.');
+
+        return $this->redirect('/admin');
+    }
+
+    /** Planer mit der Wahl des Schülers, nur lesend. */
+    public function viewStudent(array $p): string
+    {
+        $this->ctx->auth->requireAdmin();
+
+        return PlanerPage::render($this->ctx, $this->student((int) $p['id']), ['adminView' => true]);
+    }
+
+    /** Original-PDF des Schülers (Vorlage für den Planer in der Admin-Ansicht). */
+    public function studentPdf(array $p): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $row = $this->ctx->db->fetchOne('SELECT pdf FROM school_pdfs WHERE user_id = ? AND active = 1', [(int) $p['id']]);
+        if ($row === null) {
+            throw new HttpException(404, 'Für dieses Konto liegt keine Kurswahl-PDF vor.');
+        }
+        header('Content-Type: application/pdf');
+        header('Cache-Control: private, no-store');
+
+        return (string) $row['pdf'];
+    }
+
+    /** Ausgefülltes Formular eines Schülers: seine Original-PDF mit den Kreuzen seiner gespeicherten Wahl. */
+    public function studentForm(array $p): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $row = $this->formRows('u.id = ?', [(int) $p['id']])[0] ?? null;
+        if ($row === null || $row['pdf'] === null) {
+            throw new HttpException(404, 'Für dieses Konto liegt keine Kurswahl-PDF vor.');
+        }
+        [$bytes] = $this->filledPdf($row);
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . str_replace('"', '', (string) $row['filename']) . '"');
+
+        return $bytes;
+    }
+
+    public function unlock(array $p): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $this->verifyCsrf();
+        $this->ctx->db->run('UPDATE selections SET submitted_at = NULL WHERE user_id = ?', [(int) $p['id']]);
+        $this->ctx->session->flash('ok', 'Wahl wieder freigeschaltet – der Schüler kann sie ändern und erneut abgeben.');
+
+        return $this->redirect('/admin');
+    }
+
+    /**
+     * Alle Formulare als ZIP: jede Original-PDF mit den Kreuzen der gespeicherten Wahl, unter dem
+     * Original-Dateinamen. Ohne gespeicherte Wahl bleibt die PDF unausgefüllt (siehe Hinweise.txt).
+     */
+    public function exportForms(): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $nur = (string) ($_GET['nur'] ?? '');
+        $where = 'p.id IS NOT NULL' . ($nur === 'abgegeben' ? ' AND s.submitted_at IS NOT NULL' : '');
+        $rows = $this->formRows($where, []);
+        $tmp = tempnam(sys_get_temp_dir(), 'kw');
+        $zip = new \ZipArchive();
+        $zip->open($tmp, \ZipArchive::OVERWRITE);
+        $used = [];
+        $notes = [];
+        foreach ($rows as $r) {
+            try {
+                [$bytes, $note] = $this->filledPdf($r);
+            } catch (\Throwable $e) {
+                $notes[] = "{$r['login']}: nicht exportiert – {$e->getMessage()}";
+                continue;
+            }
+            if ($note !== null) {
+                $notes[] = "{$r['login']}: {$note}";
+            }
+            $name = (string) $r['filename'];
+            $base = preg_replace('/\.pdf$/i', '', $name);
+            for ($i = 2; isset($used[strtolower($name)]); $i++) {
+                $name = "{$base}-{$i}.pdf";
+            }
+            $used[strtolower($name)] = true;
+            $zip->addFromString($name, $bytes);
+        }
+        if ($notes !== []) {
+            $zip->addFromString('Hinweise.txt', "Hinweise zum Export vom " . date('d.m.Y H:i') . "\r\n\r\n" . implode("\r\n", $notes) . "\r\n");
+        }
+        $zip->close();
+        $data = (string) file_get_contents($tmp);
+        @unlink($tmp);
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="Kurswahlformulare_' . date('Y-m-d_Hi') . '.zip"');
+
+        return $data;
+    }
+
+    /** Alle Wahlen als CSV (Excel-tauglich: UTF-8 mit BOM, Semikolon). */
+    public function exportCsv(): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $rows = $this->ctx->db->fetchAll(
+            "SELECT u.login, u.display_name, p.name, p.klasse, p.schueler_id, s.updated_at, s.submitted_at, s.summary
+             FROM users u
+             LEFT JOIN school_pdfs p ON p.user_id = u.id AND p.active = 1
+             LEFT JOIN selections s ON s.user_id = u.id
+             WHERE u.role = 'student' ORDER BY p.klasse, u.login",
+        );
+        $out = fopen('php://temp', 'w+');
+        fwrite($out, "\xEF\xBB\xBF");
+        $cols = ['Login', 'Name', 'Klasse', 'Schüler-ID', 'Status', 'Abgegeben am', 'Gespeichert am', 'Offene Fehler', 'Hinweise',
+            '1. LK', '2. LK', '3. PF', '4. PF', '5. PK', 'Form 5. PK', 'Kurse', 'Jahreswochenstunden', 'Q1', 'Q2', 'Q3', 'Q4'];
+        fputcsv($out, $cols, ';', '"', '');
+        $d = static fn (?string $v): string => $v ? date('d.m.Y H:i', (int) strtotime($v)) : '';
+        foreach ($rows as $r) {
+            $sum = $r['summary'] ? (json_decode((string) $r['summary'], true) ?: []) : [];
+            $roles = $sum['roles'] ?? [];
+            $q = $sum['sems'] ?? [];
+            fputcsv($out, [
+                $r['login'], $r['name'] ?? $r['display_name'], $r['klasse'] ?? '', $r['schueler_id'] ?? '',
+                $r['submitted_at'] ? 'abgegeben' : ($r['updated_at'] ? 'gespeichert' : 'keine Wahl'),
+                $d($r['submitted_at']), $d($r['updated_at']),
+                $sum['errors'] ?? '', $sum['warnings'] ?? '',
+                $roles['lk1'] ?? '', $roles['lk2'] ?? '', $roles['pf3'] ?? '', $roles['pf4'] ?? '', $roles['pk5'] ?? '',
+                $sum['pkForm'] ?? '', $sum['total'] ?? '', $sum['hours'] ?? '',
+                implode(', ', $q[0] ?? []), implode(', ', $q[1] ?? []), implode(', ', $q[2] ?? []), implode(', ', $q[3] ?? []),
+            ], ';', '"', '');
+        }
+        rewind($out);
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="Kurswahlen_' . date('Y-m-d_Hi') . '.csv"');
+
+        return (string) stream_get_contents($out);
+    }
+
+    /** @return array<string, mixed> */
+    private function student(int $id): array
+    {
+        $u = $this->ctx->db->fetchOne("SELECT id, login, display_name FROM users WHERE id = ? AND role = 'student'", [$id]);
+        if ($u === null) {
+            throw new HttpException(404, 'Konto nicht gefunden.');
+        }
+
+        return $u;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function formRows(string $where, array $params): array
+    {
+        return $this->ctx->db->fetchAll(
+            "SELECT u.id, u.login, p.pdf, p.filename, s.summary, s.state
+             FROM users u
+             LEFT JOIN school_pdfs p ON p.user_id = u.id AND p.active = 1
+             LEFT JOIN selections s ON s.user_id = u.id
+             WHERE u.role = 'student' AND {$where} ORDER BY u.login",
+            $params,
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $r
+     * @return array{string, ?string} PDF-Bytes und ggf. Hinweis
+     */
+    private function filledPdf(array $r): array
+    {
+        $sum = $r['summary'] ? json_decode((string) $r['summary'], true) : null;
+        if (!is_array($sum) || !is_array($sum['checks'] ?? null)) {
+            return [(string) $r['pdf'], $r['state'] ? 'Wahl noch ohne Kurzfassung (Schüler muss den Planer einmal öffnen) – PDF unausgefüllt.' : 'keine Wahl gespeichert – PDF unausgefüllt.'];
+        }
+        $pk = ($sum['pkField'] ?? '') === 'BLL_0' ? 'BLL_0' : 'Praesentation_0';
+
+        return [SchoolPdfPatcher::patch((string) $r['pdf'], array_values(array_map('strval', $sum['checks'])), $pk), null];
+    }
+
     /** @return array<string, mixed> */
     private function stats(): array
     {
@@ -246,6 +452,7 @@ final class AdminController extends Controller
             'with_pdf' => (int) $db->fetchValue("SELECT COUNT(DISTINCT user_id) FROM school_pdfs WHERE user_id IS NOT NULL AND active = 1"),
             'unassigned' => (int) $db->fetchValue('SELECT COUNT(*) FROM school_pdfs WHERE user_id IS NULL AND active = 1'),
             'saved' => (int) $db->fetchValue('SELECT COUNT(*) FROM selections'),
+            'submitted' => (int) $db->fetchValue('SELECT COUNT(*) FROM selections WHERE submitted_at IS NOT NULL'),
             'queue' => count(array_filter($queue, static fn (string $f): bool => !str_ends_with($f, '.part'))),
             'folder' => count($folder),
             'worker_seen' => $beat,

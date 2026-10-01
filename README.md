@@ -14,6 +14,11 @@ Form der 5. PK setzt. Alles andere bleibt Byte für Byte unverändert.
 | **Schüler** | meldet sich an. Name, Klasse, Jahrgang und Schüler-ID kommen aus seiner PDF. Die Wahl wird automatisch auf dem Server gespeichert. Ändert er auf zwei Geräten gleichzeitig, fragt der Planer, welche Wahl gelten soll. |
 | **Schüler (Notfall)** | kann seine eigene Schul-PDF hochladen. Dann bleiben PDF, Stammdaten und Wahl **nur in diesem Browser** und gehen nicht an den Server. Mit „Eigene PDF entfernen“ kehrt er zum Server-Stand zurück. Enthält die PDF schon Kreuze, werden sie übernommen (außer den Sportkursen). |
 
+| **Schüler** | gibt seine Wahl mit „Wahl abgeben“ verbindlich ab. Danach ist sie gesperrt, bis der Admin sie wieder freischaltet. |
+| **Admin** | stellt eine Abgabefrist ein und wählt, was danach gilt: nur noch ansehen, Anmeldung gesperrt oder nur Hinweis. |
+| **Admin** | sieht in der Schülerliste, wer gespeichert bzw. abgegeben hat und wie viele Fehler die Wahl noch hat, öffnet die Wahl eines Schülers im Planer (nur lesen) und lädt sein ausgefülltes Formular herunter. |
+| **Admin** | exportiert alle Formulare als ZIP (jede Original-PDF mit den Kreuzen der gespeicherten Wahl, byte-gleich und unter dem Original-Dateinamen; wahlweise nur abgegebene) und alle Wahlen als CSV für Excel. |
+
 Liegt für ein Konto keine PDF vor, erzeugt der Planer das Formular selbst aus der eingebetteten Vorlage
 (siehe `tools/`). Name, Klasse, Jahrgang und Schüler-ID trägt der Schüler dann von Hand ein.
 

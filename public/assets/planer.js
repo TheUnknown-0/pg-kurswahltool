@@ -76,7 +76,9 @@ const lsGet = k => { try{ return localStorage.getItem(k); }catch(e){ return null
 const lsSet = (k,v) => { try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } };
 const lsDel = k => { try{ localStorage.removeItem(k); }catch(e){} };
 // Stammdaten der selbst hochgeladenen PDF (null = keine eigene PDF)
-let localProfile = (()=>{ try{ return JSON.parse(lsGet(LOCAL_PDF_KEY)||'null'); }catch(e){ return null; } })();
+let localProfile = SERVER && BOOT.readOnly ? null : (()=>{ try{ return JSON.parse(lsGet(LOCAL_PDF_KEY)||'null'); }catch(e){ return null; } })();
+// Nur lesen: Admin-Ansicht, abgegebene Wahl oder abgelaufene Frist
+let readOnly = SERVER && !!BOOT.readOnly;
 const localMode = () => !!localProfile;
 const profile = () => localProfile || (BOOT && BOOT.profile) || null;
 let st = {
@@ -92,6 +94,7 @@ function load(){
   try{ const r=lsGet(STORE_KEY); if(r) mergeState(JSON.parse(r)); else if(SERVER) mergeState(BOOT.state); }catch(e){}
 }
 function save(){
+  if(readOnly) return;
   if(SERVER && !localMode()){ scheduleServerSave(); return; }
   lsSet(STORE_KEY,JSON.stringify(st));
 }
@@ -99,6 +102,25 @@ function save(){
 function applyProfile(){
   const p=profile(); if(!p) return;
   st.name=p.name||''; st.klasse=p.klasse||''; st.jahrgang=p.jahrgang||''; st.schuelerId=p.schuelerId||'';
+}
+
+/* ---- Kurzfassung der Wahl (für Admin-Liste, CSV- und Formular-Export) ---- */
+function buildSummary(){
+  const ev=evaluate(), name=id=>id==='spt'?'Sporttheorie':(S[id]?S[id].name:id);
+  const perSem=[0,1,2,3].map(i=>[
+    ...SUBJECTS.filter(s=>s.id!=='spo' && sems(s.id)[i]).map(s=>s.name),
+    ...(sems('spt')[i]?['Sporttheorie']:[]),
+    ...(!sportOff() && st.sport[i] ? [`Sport ${SPORT[st.sport[i]]||st.sport[i]}`] : []),
+    ...ZUSATZ.filter(z=>(st.zusatz[z.id]||[])[i]).map(z=>`Zusatzkurs ${z.name}`),
+  ]);
+  const {checks}=formChecks();
+  return {
+    errors:ev.R.filter(r=>r.level==='error').length, warnings:ev.R.filter(r=>r.level==='warn').length,
+    total:ev.total, hours:ev.hours,
+    roles:Object.fromEntries(ROLES.map(([r])=>[r, st.roles[r]?name(st.roles[r]):''])),
+    pkForm:st.pkForm==='bll'?'Besondere Lernleistung':'Präsentationsprüfung', pkField:st.pkForm==='bll'?'BLL_0':'Praesentation_0',
+    sems:perSem, checks,
+  };
 }
 
 /* ---- Speichern auf dem Server ---- */
@@ -110,7 +132,7 @@ async function serverSave(force=false){
   try{
     const r=await fetch('api/state',{method:'POST', credentials:'same-origin',
       headers:{'Content-Type':'application/json','X-CSRF-Token':BOOT.csrf,'Accept':'application/json'},
-      body:JSON.stringify({state:st, version:srvVersion, force})});
+      body:JSON.stringify({state:st, version:srvVersion, force, summary:buildSummary()})});
     const j=await r.json().catch(()=>({}));
     if(r.status===409 && j.conflict){
       const when=j.savedAt?` (${fmtDateTime(j.savedAt)})`:'';
@@ -122,6 +144,7 @@ async function serverSave(force=false){
     }
     if(r.status===401){ setSync('error','Du bist abgemeldet. Bitte melde dich neu an – deine letzte Änderung ist nicht gespeichert.'); dirty=true; return; }
     if(r.status===419){ setSync('error','Die Sitzung ist abgelaufen. Bitte lade die Seite neu.'); dirty=true; return; }
+    if(r.status===423){ dirty=false; applyReadOnly(); setSync('error', j.error||'Die Wahl ist gesperrt.'); return; }
     if(!r.ok) throw new Error(j.error||r.status);
     srvVersion=j.version; setSync('saved', j.savedAt);
   }catch(e){
@@ -141,6 +164,7 @@ function setSync(kind, info){
   syncEl.textContent = kind==='pending' ? 'Wird gespeichert …'
     : kind==='saved' ? `Auf dem Server gespeichert${info?' · '+fmtDateTime(info):''}`
     : kind==='local' ? 'Nur in diesem Browser (eigene PDF)'
+    : kind==='locked' ? info
     : (info||'Fehler');
 }
 // Paar-Kurse: gewähltes Jahr (0 = Q1+Q2, 1 = Q3+Q4) oder null
@@ -1221,20 +1245,62 @@ async function schoolPdfBytes(){
     if(!b) throw new FormError('Deine hochgeladene PDF ist in diesem Browser nicht mehr vorhanden. Lade sie erneut hoch.');
     return new Uint8Array(b);
   }
-  const r=await fetch('api/pdf',{credentials:'same-origin'});
+  const r=await fetch(SERVER && BOOT.pdfUrl || 'api/pdf',{credentials:'same-origin'});
   if(r.status===401) throw new FormError('Du bist abgemeldet. Bitte melde dich neu an.');
   if(!r.ok) throw new FormError('Deine Kurswahl-PDF konnte nicht vom Server geladen werden.');
   return new Uint8Array(await r.arrayBuffer());
+}
+
+/* ---- Nur lesen ---- */
+const READONLY_IDS=['#modebar','#sec-wizard','#sec-basis','#sec-faecher','#sec-sport','#sec-zusatz','.hero-card .namefield'];
+function applyReadOnly(){
+  readOnly=true;
+  if(document.body.classList.contains('mode-wizard')) setMode('check');
+  READONLY_IDS.forEach(sel=>document.querySelectorAll(sel).forEach(el=>{ el.inert=true; el.classList.add('kw-ro'); }));
+  ['#import','#reset'].forEach(sel=>{ const b=$(sel); if(b) b.hidden=true; });
+  document.querySelectorAll('.kw-account .kw-up,.kw-account .kw-submit').forEach(b=>{ b.hidden=true; });
+  document.body.classList.add('kw-readonly');
+}
+const fmtDeadline = d => fmtDateTime(d)+' Uhr';
+function lockText(){
+  const L=BOOT.lock||{};
+  if(BOOT.adminView) return `Ansicht als Admin – nur lesen${L.submittedAt?` · abgegeben am ${fmtDateTime(L.submittedAt)}`:''}`;
+  if(L.submittedAt) return `Abgegeben am ${fmtDateTime(L.submittedAt)} – Änderungen nur nach Freischaltung durch die Schule`;
+  if(L.expired && L.mode!=='hint') return `Abgabefrist am ${fmtDeadline(L.deadline)} abgelaufen – nur noch ansehen`;
+  return null;
+}
+async function submitChoice(){
+  const ev=evaluate(), errs=ev.R.filter(r=>r.level==='error').length;
+  if(errs && !confirm(`Deine Wahl ist laut Planer noch nicht zulässig (${errs} ${errs===1?'Punkt':'Punkte'} offen). Trotzdem abgeben?`)) return;
+  if(!confirm('Wahl jetzt verbindlich abgeben?\n\nDanach kannst du nichts mehr ändern, bis die Schule deine Wahl wieder freischaltet.')) return;
+  if(dirty||saving||!srvVersion){ clearTimeout(saveTimer); await serverSave(); }
+  for(let i=0;i<20&&saving;i++) await new Promise(r=>setTimeout(r,150));
+  if(dirty){ showIo('Deine Wahl konnte nicht gespeichert werden – Abgabe abgebrochen.','error'); return; }
+  try{
+    const r=await fetch('api/submit',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':BOOT.csrf,'Accept':'application/json'},body:JSON.stringify({version:srvVersion})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){ showIo(j.error||'Die Abgabe ist fehlgeschlagen.','error'); return; }
+    BOOT.lock={...(BOOT.lock||{}), submittedAt:j.submittedAt, locked:true};
+    applyReadOnly(); setSync('locked', lockText());
+    showIo('Deine Wahl ist abgegeben. Lade jetzt dein Kurswahlformular herunter, prüfe es und gib es ab.','ok');
+  }catch(e){ showIo('Die Abgabe ist fehlgeschlagen. Prüfe deine Internetverbindung.','error'); }
 }
 
 /* ---- Kontoleiste: Anmeldung, Speicherstand, eigene PDF ---- */
 function setupAccountBar(){
   const bar=document.createElement('div'); bar.className='kw-account';
   const who=document.createElement('span'); who.className='kw-who';
-  who.textContent = SERVER ? `Angemeldet als ${BOOT.login}` : 'Ohne Anmeldung – alles bleibt in diesem Browser';
+  who.textContent = !SERVER ? 'Ohne Anmeldung – alles bleibt in diesem Browser'
+    : BOOT.adminView ? `Wahl von ${(BOOT.profile&&BOOT.profile.name)||BOOT.displayName||BOOT.login} (${BOOT.login})` : `Angemeldet als ${BOOT.login}`;
   syncEl=document.createElement('span'); syncEl.className='kw-sync';
   const file=document.createElement('input'); file.type='file'; file.accept='.pdf,application/pdf'; file.hidden=true;
-  const up=document.createElement('button'); up.type='button'; up.className='btn'; up.textContent='Eigene Schul-PDF hochladen';
+  const up=document.createElement('button'); up.type='button'; up.className='btn kw-up'; up.textContent='Eigene Schul-PDF hochladen';
+  const sub=document.createElement('button'); sub.type='button'; sub.className='btn primary kw-submit'; sub.textContent='Wahl abgeben';
+  sub.hidden=!SERVER || localMode(); sub.onclick=submitChoice;
+  const dl=document.createElement('span'); dl.className='kw-deadline';
+  const L=SERVER?BOOT.lock||{}:{};
+  if(L.deadline && !L.expired) dl.textContent=`Abgabe bis ${fmtDeadline(L.deadline)}`;
+  else if(L.deadline && L.mode==='hint') dl.textContent=`Abgabefrist am ${fmtDeadline(L.deadline)} abgelaufen`;
   const rm=document.createElement('button'); rm.type='button'; rm.className='btn'; rm.textContent=SERVER?'Eigene PDF entfernen (Server-Stand laden)':'Eigene PDF entfernen';
   rm.hidden=!localMode();
   up.onclick=()=>file.click();
@@ -1265,8 +1331,11 @@ function setupAccountBar(){
     lsDel(LOCAL_PDF_KEY); if(SERVER) lsDel(STORE_KEY);
     location.reload();
   };
-  bar.append(who, syncEl, up, rm, file);
-  if(SERVER){
+  bar.append(who, syncEl, dl, sub, up, rm, file);
+  if(SERVER && BOOT.adminView){
+    const back=document.createElement('a'); back.className='btn'; back.href=BOOT.adminUrl||'admin'; back.textContent='Zurück zur Übersicht';
+    bar.append(back);
+  } else if(SERVER){
     const out=document.createElement('form'); out.method='post'; out.action='logout'; out.className='kw-logout';
     const t=document.createElement('input'); t.type='hidden'; t.name='_csrf'; t.value=BOOT.csrf;
     const b=document.createElement('button'); b.type='submit'; b.className='btn'; b.textContent='Abmelden';
@@ -1275,8 +1344,9 @@ function setupAccountBar(){
   }
   document.querySelector('header.hero .wrap').prepend(bar);
   if(localMode()) setSync('local');
+  else if(SERVER && lockText()) setSync('locked', lockText());
   else if(SERVER) setSync(BOOT.savedAt?'saved':'pending', BOOT.savedAt||undefined);
-  if(SERVER && !localMode() && !BOOT.savedAt) syncEl.textContent='Noch nichts gespeichert';
+  if(SERVER && !localMode() && !lockText() && !BOOT.savedAt) syncEl.textContent='Noch nichts gespeichert';
   // Felder aus der Schul-PDF sind nicht änderbar
   const p=profile();
   ['#name','#klasse','#jahrgang','#schuelerid'].forEach(sel=>{ const el=$(sel); el.readOnly=!!p; el.title=p?'Aus deiner Kurswahl-PDF der Schule':''; });
@@ -1960,3 +2030,5 @@ setupAccountBar();
 renderLangs();
 if(SERVER && !localMode()){ applyProfile(); normalize(); renderAll(); }  // ohne Änderung nichts speichern
 else update();
+if(readOnly) applyReadOnly();
+else if(SERVER && !localMode() && BOOT.needsSummary) serverSave();   // Kurzfassung für ältere Speicherstände nachtragen

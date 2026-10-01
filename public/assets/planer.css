@@ -299,3 +299,7 @@ body.mode-wizard .hero-card{grid-template-columns:1fr}
 .namefield input[readonly]{background:var(--paper-2);color:var(--ink-2)}
 @media print{.kw-account{display:none}}
 .kw-account [hidden]{display:none}
+.kw-deadline{color:var(--orange);font-weight:650}
+.kw-sync.locked{color:var(--orange);font-weight:650}
+.kw-ro{opacity:.75}
+body.kw-readonly #modebar{display:none}

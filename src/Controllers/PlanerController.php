@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\HttpException;
+use App\Services\Deadline;
+use App\Services\PlanerPage;
 
 /**
  * Planer für Schüler: liefert die Seite mit den Startdaten aus, die eigene Schul-PDF und
@@ -12,7 +14,7 @@ use App\Core\HttpException;
  */
 final class PlanerController extends Controller
 {
-    private const MAX_STATE_BYTES = 64 * 1024;
+    private const MAX_STATE_BYTES = 128 * 1024;
 
     public function index(): string
     {
@@ -20,37 +22,12 @@ final class PlanerController extends Controller
         if ($user['role'] === 'admin') {
             return $this->redirect('/admin');
         }
+        if ((new Deadline($this->ctx->db))->loginBlocked()) {
+            $this->ctx->auth->logout();
+            throw new HttpException(403, 'Die Abgabefrist ist abgelaufen. Die Anmeldung ist geschlossen.');
+        }
 
-        $pdf = $this->activePdf((int) $user['id']);
-        $sel = $this->ctx->db->fetchOne('SELECT state, version, updated_at FROM selections WHERE user_id = ?', [$user['id']]);
-        $boot = [
-            'login' => $user['login'],
-            'displayName' => $user['display_name'],
-            'csrf' => $this->ctx->csrf->token(),
-            'base' => $this->ctx->config['app']['base_url'],
-            'profile' => $pdf === null ? null : [
-                'name' => $pdf['name'],
-                'klasse' => $pdf['klasse'],
-                'jahrgang' => $pdf['jahrgang'],
-                'schuelerId' => $pdf['schueler_id'],
-                'jahrgangId' => $pdf['abitur_jahrgang_id'],
-                'pdfCreatedAt' => $pdf['pdf_created_at'],
-                'sha256' => $pdf['sha256'],
-            ],
-            'state' => $sel === null ? null : json_decode((string) $sel['state'], true),
-            'version' => $sel === null ? 0 : (int) $sel['version'],
-            'savedAt' => $sel['updated_at'] ?? null,
-        ];
-
-        $html = (string) file_get_contents(dirname(__DIR__, 2) . '/public/planer.html');
-        $json = json_encode($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP);
-        $inject = '<base href="' . e($this->ctx->url('/')) . '">';
-        $html = str_replace('<meta charset="utf-8">', '<meta charset="utf-8">' . "\n" . $inject, $html);
-        $html = str_replace('<script src="assets/form-template.js">',
-            '<script type="application/json" id="kw-boot">' . $json . "</script>\n" . '<script src="assets/form-template.js">', $html);
-        header('Cache-Control: no-store');
-
-        return $html;
+        return PlanerPage::render($this->ctx, $user);
     }
 
     /** Die eigene, aktive Schul-PDF (Vorlage für das Formular mit Kreuzen). */
@@ -90,10 +67,12 @@ final class PlanerController extends Controller
         if (!is_array($body) || !is_array($body['state'] ?? null) || !is_int($body['version'] ?? null)) {
             throw new HttpException(400);
         }
+        $this->assertUnlocked((int) $user['id']);
         $state = json_encode($body['state'], JSON_UNESCAPED_UNICODE);
+        $summary = is_array($body['summary'] ?? null) ? json_encode($body['summary'], JSON_UNESCAPED_UNICODE) : null;
         $force = ($body['force'] ?? false) === true;
 
-        return $this->ctx->db->transaction(function () use ($user, $state, $body, $force): array {
+        return $this->ctx->db->transaction(function () use ($user, $state, $summary, $body, $force): array {
             $cur = $this->ctx->db->fetchOne('SELECT state, version, updated_at FROM selections WHERE user_id = ? FOR UPDATE', [$user['id']]);
             $curVersion = $cur === null ? 0 : (int) $cur['version'];
             if (!$force && $curVersion !== $body['version']) {
@@ -104,9 +83,9 @@ final class PlanerController extends Controller
             }
             $next = $curVersion + 1;
             $this->ctx->db->run(
-                'INSERT INTO selections (user_id, state, version) VALUES (?, ?, ?)
-                 ON DUPLICATE KEY UPDATE state = VALUES(state), version = VALUES(version), updated_at = CURRENT_TIMESTAMP',
-                [$user['id'], $state, $next],
+                'INSERT INTO selections (user_id, state, version, summary) VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE state = VALUES(state), version = VALUES(version), summary = VALUES(summary), updated_at = CURRENT_TIMESTAMP',
+                [$user['id'], $state, $next, $summary],
             );
 
             return ['success' => true, 'version' => $next,
@@ -114,13 +93,35 @@ final class PlanerController extends Controller
         });
     }
 
-    /** @return array<string, mixed>|null */
-    private function activePdf(int $userId): ?array
+    /** Wahl verbindlich abgeben – danach gesperrt, bis der Admin freischaltet. */
+    public function submit(): array
     {
-        return $this->ctx->db->fetchOne(
-            'SELECT name, klasse, jahrgang, schueler_id, abitur_jahrgang_id, pdf_created_at, sha256
-             FROM school_pdfs WHERE user_id = ? AND active = 1',
-            [$userId],
-        );
+        $user = $this->ctx->auth->require();
+        $this->verifyCsrf();
+        if ($user['role'] !== 'student') {
+            throw new HttpException(403);
+        }
+        $this->assertUnlocked((int) $user['id']);
+        $body = json_decode((string) file_get_contents('php://input'), true);
+        $cur = $this->ctx->db->fetchOne('SELECT version FROM selections WHERE user_id = ?', [$user['id']]);
+        if ($cur === null) {
+            throw new HttpException(400, 'Es ist noch keine Wahl gespeichert.');
+        }
+        if ((int) $cur['version'] !== (int) ($body['version'] ?? -1)) {
+            throw new HttpException(409, 'Deine Wahl wurde inzwischen geändert. Bitte lade die Seite neu und gib dann ab.');
+        }
+        $this->ctx->db->run('UPDATE selections SET submitted_at = NOW() WHERE user_id = ?', [$user['id']]);
+
+        return ['success' => true, 'submittedAt' => $this->ctx->db->fetchValue('SELECT submitted_at FROM selections WHERE user_id = ?', [$user['id']])];
+    }
+
+    private function assertUnlocked(int $userId): void
+    {
+        $lock = (new Deadline($this->ctx->db))->stateFor($userId);
+        if ($lock['locked']) {
+            throw new HttpException(423, $lock['submittedAt'] !== null
+                ? 'Deine Wahl ist abgegeben. Änderungen sind erst nach Freischaltung durch die Schule möglich.'
+                : 'Die Abgabefrist ist abgelaufen. Änderungen sind nicht mehr möglich.');
+        }
     }
 }

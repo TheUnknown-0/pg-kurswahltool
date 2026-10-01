@@ -51,7 +51,7 @@ final class PdfImporter
                     continue;
                 }
                 $data = $zip->getFromIndex($i);
-                $this->importPdf($data === false ? '' : $data, $label, $source) ? $result['ok']++ : $result['failed']++;
+                $this->importPdf($data === false ? '' : $data, $label, $source, basename($name)) ? $result['ok']++ : $result['failed']++;
             }
             $zip->close();
 
@@ -76,8 +76,9 @@ final class PdfImporter
     }
 
     /** Importiert ein einzelnes PDF. Gibt false bei Fehlern zurück (protokolliert). */
-    public function importPdf(string $data, string $filename, string $source): bool
+    public function importPdf(string $data, string $filename, string $source, ?string $storeName = null): bool
     {
+        $storeName ??= basename($filename);
         try {
             $info = SchoolPdf::parse($data);
         } catch (\Throwable $e) {
@@ -97,13 +98,13 @@ final class PdfImporter
         $loginKey = LoginName::fromName($info['name']);
         $userId = $this->db->fetchValue('SELECT id FROM users WHERE login = ? AND role = ?', [$loginKey, 'student']);
 
-        return $this->db->transaction(function (Database $db) use ($info, $data, $hash, $filename, $source, $loginKey, $userId): bool {
+        return $this->db->transaction(function (Database $db) use ($info, $data, $hash, $filename, $source, $loginKey, $userId, $storeName): bool {
             $db->run(
                 'INSERT INTO school_pdfs (user_id, login_key, name, klasse, jahrgang, schueler_id, abitur_jahrgang_id,
                      pdf_created_at, filename, sha256, size_bytes, pdf, active)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
                 [$userId, $loginKey, $info['name'], $info['klasse'], $info['jahrgang'], $info['schueler_id'],
-                    $info['abitur_jahrgang_id'], $info['created_at'], mb_substr(basename($filename), 0, 255), $hash, strlen($data), $data],
+                    $info['abitur_jahrgang_id'], $info['created_at'], mb_substr($storeName, 0, 255), $hash, strlen($data), $data],
             );
             $id = $db->lastInsertId();
             $replaced = $this->activateNewest($userId !== null ? (int) $userId : null, $loginKey);
