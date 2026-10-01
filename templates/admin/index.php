@@ -59,6 +59,20 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
     </section>
   </div>
 
+  <section class="card">
+    <h2>Schüler hinzufügen</h2>
+    <form method="post" action="<?= e($ctx->url('/admin/users/create')) ?>" class="addform">
+      <?= $csrf->field() ?>
+      <div><label for="add-name">Vorname Nachname</label>
+        <input type="text" id="add-name" name="name" placeholder="z. B. Anna Schmidt" autocomplete="off"></div>
+      <div><label for="add-login">Login <span class="muted small">(leer = aus dem Namen)</span></label>
+        <input type="text" id="add-login" name="login" placeholder="vorname.nachname" autocapitalize="none" spellcheck="false" autocomplete="off"></div>
+      <div><label for="add-pw">Passwort</label>
+        <input type="text" id="add-pw" name="password" minlength="4" required autocomplete="new-password"></div>
+      <div><button class="btn primary" type="submit">Anlegen</button></div>
+    </form>
+  </section>
+
   <?php if ($unassigned): ?>
   <section class="card">
     <h2>PDFs ohne Konto (<?= count($unassigned) ?>)</h2>

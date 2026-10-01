@@ -26,6 +26,7 @@ return static function (Router $r): void {
     $r->get('/admin/api/status', [AdminController::class, 'status']);
     $r->post('/admin/upload', [AdminController::class, 'upload']);
     $r->post('/admin/users/import', [AdminController::class, 'importUsers']);
+    $r->post('/admin/users/create', [AdminController::class, 'createUser']);
     $r->post('/admin/users/{id}/password', [AdminController::class, 'setPassword']);
     $r->post('/admin/users/{id}/delete', [AdminController::class, 'deleteUser']);
     $r->post('/admin/pdfs/{id}/assign', [AdminController::class, 'assignPdf']);
