@@ -1,0 +1,69 @@
+/* Login- und Admin-Seiten im Stil des Planers (assets/planer.css, angelehnt an 5pk.pg-hub.de) */
+:root{
+  color-scheme:light;
+  --blue:#153d6f; --blue2:#235a96; --blue-dark:#0e315b; --head:#142f50;
+  --bg:#f1f4f8; --paper:#fff; --paper-2:#f5f7fa; --paper-3:#e8edf3;
+  --ink:#1c2733; --ink-2:#5d6877; --ink-3:#8793a2;
+  --line:#d7dee8; --line-strong:#b9c4d2; --blue-tint:#e7eff8;
+  --red:#a52424; --red-soft:#fae7e7; --green:#226038; --green-soft:#dff2e5; --orange:#764500; --orange-soft:#fff2d9;
+  --shadow:0 8px 28px #19365316;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:48px}
+h1,h2,h3{color:var(--head);line-height:1.2;margin:0 0 .6em}
+a{color:var(--blue)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #2b70b96b;outline-offset:2px}
+.wrap{width:min(1150px,calc(100% - 32px));margin:0 auto}
+
+/* Kopf wie im Planer */
+.top{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:40px 0 28px}
+.top h1{font-size:clamp(1.5rem,4vw,2.1rem);margin-bottom:5px}
+.subtitle{color:var(--ink-2);margin:0}
+.logo{width:190px;max-height:80px;object-fit:contain}
+.eyebrow{display:inline-block;color:var(--blue2);font-size:.82rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+
+.card{background:var(--paper);border-radius:12px;box-shadow:var(--shadow);padding:clamp(20px,3vw,30px);margin-bottom:22px}
+.card.hero{border-top:5px solid var(--blue);background:linear-gradient(135deg,#fff 0%,#f7faff 68%,#edf4fc 100%)}
+.muted{color:var(--ink-2)}
+.small{font-size:.88rem}
+label{display:block;font-weight:650;margin:14px 0 6px}
+input[type=text],input[type=password],input[type=search],select{width:100%;border:1px solid var(--line-strong);border-radius:7px;padding:11px 12px;background:#fff}
+input:focus,select:focus{outline:3px solid #2b70b92d;border-color:var(--blue2)}
+input[type=file]{max-width:100%}
+
+.btn{display:inline-block;border:0;border-radius:7px;background:#e8edf3;color:#253649;padding:11px 17px;font-weight:700;text-decoration:none;cursor:pointer}
+.btn:hover{background:#dce3eb}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.primary:hover{background:var(--blue-dark)}
+.btn.danger{background:transparent;color:var(--red);text-decoration:underline;padding-inline:8px}
+.btn.sm{padding:5px 10px;font-size:.85rem}
+
+.msg{border-radius:7px;padding:12px 15px;margin:0 0 12px;font-weight:600}
+.msg.ok{background:var(--green-soft);color:var(--green)}
+.msg.error{background:var(--red-soft);color:#852020}
+.msg.warn{background:var(--orange-soft);color:var(--orange)}
+
+.login{max-width:440px;margin:0 auto}
+.login .btn{width:100%;margin-top:22px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--paper-2);border:1px solid var(--line);border-radius:9px;padding:12px 14px;color:var(--ink-2);font-size:.92rem}
+.stat b{display:block;font-size:1.7rem;color:var(--head)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px}
+.grid2 .card{margin-bottom:0}
+.grid2+.card,.grid2{margin-bottom:22px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--ink-2);font-weight:650;background:var(--paper-2)}
+.tablewrap{overflow-x:auto}
+.inline{display:inline-flex;gap:6px;align-items:center;margin:0}
+.inline input,.inline select{width:auto;padding:5px 8px;font-size:.85rem}
+.tag{display:inline-block;border-radius:5px;padding:1px 7px;font-size:.8rem;font-weight:650}
+.tag.importiert,.tag.aktualisiert{background:var(--green-soft);color:var(--green)}
+.tag.doppelt{background:var(--paper-3);color:var(--ink-2)}
+.tag.fehler{background:var(--red-soft);color:var(--red)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.filters input,.filters select{width:auto;max-width:280px}
+code{background:var(--blue-tint);border-radius:4px;padding:1px 5px;font-size:.9em}
+@media (max-width:640px){.top{flex-direction:column-reverse;align-items:flex-start}.logo{width:150px}}

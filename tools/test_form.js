@@ -51,7 +51,7 @@ function readSchoolPdf(file) {
   const browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM ? {executablePath: process.env.PLAYWRIGHT_CHROMIUM} : {});
   const page = await browser.newPage();
   await page.route(/^https?:/, r => r.abort());
-  await page.goto('file://' + path.resolve(__dirname, '../kurswahl-planer.html'));
+  await page.goto('file://' + path.resolve(__dirname, '../public/planer.html'));
   let failed = 0;
   for (const file of files) {
     const opts = readSchoolPdf(file), ref = fs.readFileSync(file);

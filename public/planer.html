@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kurswahl-Planer – Qualifikationsphase Paulsen-Gymnasium</title>
+<link rel="stylesheet" href="assets/planer.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Kurswahl-Planer</h1>
+        <p class="subtitle">Qualifikationsphase am Paulsen-Gymnasium Berlin</p>
+      </div>
+      <img class="logo" src="https://5pk.pg-hub.de/assets/logo-frei.png" alt="Paulsen-Gymnasium" data-hide-on-error>
+    </div>
+    <div class="card hero-card">
+      <div class="hero-copy">
+        <span class="eyebrow">Kurswahl für Q1 bis Q4</span>
+        <h2>Plane deine Kurse bis zum Abitur</h2>
+        <p>Wähle Leistungskurse und Prüfungsfächer, setze deine Kreuze in Halbjahresblöcken und sieh sofort, ob deine Wahl den Vorgaben der VO-GO entspricht.</p>
+        <div class="namefield">
+          <label for="name">Name (für Formular und Ausdruck)</label>
+          <input id="name" placeholder="Vorname Nachname" autocomplete="name">
+          <label for="klasse" style="margin-top:12px">Klasse</label>
+          <input id="klasse" placeholder="z. B. Q1_Ws" maxlength="20">
+          <label for="jahrgang" style="margin-top:12px">Jahrgang (für das Kurswahlformular)</label>
+          <input id="jahrgang" list="jahrgang-list" placeholder="z. B. Abitur 2026/27" maxlength="30">
+          <datalist id="jahrgang-list"></datalist>
+          <label for="schuelerid" style="margin-top:12px">Schüler-ID (für das Kurswahlformular)</label>
+          <input id="schuelerid" inputmode="numeric" maxlength="10" placeholder="nur Ziffern" autocomplete="off">
+          <small class="field-hint">Steht unsichtbar in deiner Kurswahl-PDF der Schule. Die Schule ordnet das Formular damit dir zu.</small>
+        </div>
+      </div>
+      <aside class="hero-panel">
+        <h3>So gehst du vor</h3>
+        <ul class="check-list">
+          <li>Ausgangslage angeben</li>
+          <li>Leistungskurse und Prüfungsfächer antippen</li>
+          <li>Grundkurse in Blöcken ankreuzen: Q1+Q2 oder Q3+Q4</li>
+          <li>Sport und Zusatzkurse wählen</li>
+          <li>Plan drucken oder als Datei sichern</li>
+        </ul>
+        <a class="text-link" href="#sec-check">Zur Prüfung deiner Wahl →</a>
+      </aside>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<div class="card modebar" id="modebar">
+  <div><b>Wie möchtest du planen?</b><small>Der Assistent führt dich Frage für Frage zu einer zulässigen Wahl. Im Ankreuzmodus setzt du alle Kreuze selbst.</small></div>
+  <div class="seg" id="modeseg">
+    <button type="button" data-mode="check" class="on" aria-pressed="true">Ankreuzmodus</button>
+    <button type="button" data-mode="wizard" aria-pressed="false">Assistent</button>
+  </div>
+</div>
+<p class="io-msg" id="mode-msg" role="status" hidden></p>
+
+<!-- ================= Assistent ================= -->
+<section class="block" id="sec-wizard">
+  <div class="block-head">
+    <span class="wz-stepno" id="wz-stepno"></span>
+    <h2 id="wz-title"></h2>
+    <p class="hint" id="wz-hint"></p>
+    <div class="wz-progress" aria-hidden="true"><i id="wz-bar"></i></div>
+  </div>
+  <div class="block-body">
+    <div id="wz-body"></div>
+    <div class="wz-nav">
+      <div>
+        <button class="btn" type="button" id="wz-back">Zurück</button>
+        <button class="btn danger" type="button" id="wz-cancel">Assistent abbrechen</button>
+      </div>
+      <div>
+        <button class="btn primary" type="button" id="wz-next">Weiter</button>
+        <button class="btn primary" type="button" id="wz-finish" hidden>Übernehmen und zum Ankreuzmodus</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Grunddaten ================= -->
+<section class="block" id="sec-basis">
+  <div class="block-head">
+    <span class="num">01</span>
+    <h2>Deine Ausgangslage</h2>
+    <p class="hint">Diese Angaben bestimmen, welche Fächer du überhaupt wählen darfst.</p>
+  </div>
+  <div class="block-body grid2">
+    <div class="field">
+      <span>Fremdsprachen – seit welcher Klasse?</span><small class="klhint">Leer lassen, wenn du die Sprache nicht lernst. Klasse 10 = neu begonnen.</small>
+      <div class="langs" id="langs"></div>
+    </div>
+    <div>
+      <div class="field"><span>In Klasse 10 als Wahlpflichtfach belegt</span></div>
+      <label class="check"><input type="checkbox" data-meta="wpfInf"> Informatik</label>
+      <label class="check"><input type="checkbox" data-meta="wpfSw"> Sozialwissenschaften</label>
+      <label class="check"><input type="checkbox" data-meta="wpfDs"> Darstellendes Spiel (oder Theater-Erfahrung)</label>
+      <div class="field" style="margin-top:10px"><span>Sport</span></div>
+      <label class="check"><input type="checkbox" data-meta="ruderAg"> Mindestens ein Jahr in der Ruder-AG</label>
+      <label class="check"><input type="checkbox" data-meta="befreit"> Dauerhaft vom Sport befreit (Attest)</label>
+      <div class="field" style="margin-top:10px"><span>Form der 5. Prüfungskomponente</span>
+        <div class="seg" id="pkform">
+          <button type="button" data-v="praes" class="on">Präsentationsprüfung</button>
+          <button type="button" data-v="bll">Besondere Lernleistung</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Fächer ================= -->
+<section class="block" id="sec-faecher">
+  <div class="block-head">
+    <span class="num">02</span>
+    <h2>Fächer und Kurshalbjahre</h2>
+    <p class="hint">Tippe eine Rolle an (1. LK, 2. LK, 3. PF, 4. PF, 5. PK) – die vier Halbjahre werden dann automatisch belegt. Grundkurse belegst du in Blöcken: ein Klick kreuzt Q1+Q2 oder Q3+Q4 an. Deutsch und Mathematik sind durchgängig Pflicht und bereits eingetragen.</p>
+  </div>
+  <div class="block-body" id="faecher"></div>
+</section>
+
+<!-- ================= Sport ================= -->
+<section class="block" id="sec-sport">
+  <div class="block-head">
+    <span class="num">03</span>
+    <h2>Sport</h2>
+    <p class="hint">In jedem Halbjahr ein Praxiskurs. Höchstens drei Kurse aus Ballspielen (B), mindestens einer aus einem anderen Bewegungsfeld.</p>
+  </div>
+  <div class="block-body">
+    <div class="sportgrid" id="sport"></div>
+    <p class="note">Ob ein Kurs stattfindet und in welchem Halbjahr, hängt von den Wahlen und der Organisation der Schule ab. Rudern setzt die Ruder-AG und die Mitgliedschaft im Schüler-Ruder-Verband Wannsee voraus.</p>
+  </div>
+</section>
+
+<!-- ================= Zusatzkurse ================= -->
+<section class="block" id="sec-zusatz">
+  <div class="block-head">
+    <span class="num">04</span>
+    <h2>Zusatzkurse</h2>
+    <p class="hint">Zählen zur Belegverpflichtung. In die Gesamtqualifikation eingebracht werden können sie nur, wenn du im zugehörigen Fach mindestens zwei reguläre Kurse belegst (Ausnahme: Musik-Ensembles). Die meisten Kurse über zwei Halbjahre werden in beiden Jahren angeboten – du belegst sie einmal, entweder in Q1+Q2 oder in Q3+Q4. Englisch-Debating gibt es nur in Q1+Q2, Politik-Debating nur in Q3+Q4.</p>
+  </div>
+  <div class="block-body" id="zusatz"></div>
+</section>
+
+<!-- ================= Übersicht ================= -->
+<section class="block" id="sec-check">
+  <div class="block-head">
+    <span class="num">05</span>
+    <h2>Prüfung deiner Wahl</h2>
+    <p class="hint">Rot muss behoben werden, Orange solltest du mit dem Päko besprechen.</p>
+  </div>
+  <div class="block-body">
+    <div class="pfgrid" id="pfcards"></div>
+    <div class="stats" id="stats"></div>
+    <div id="checklist"></div>
+    <div class="actions">
+      <button class="btn primary" type="button" id="fillform">Kurswahlformular erstellen (PDF)</button>
+      <button class="btn" type="button" id="print">Übersichtsplan drucken</button>
+      <button class="btn" type="button" id="export">Als Datei sichern</button>
+      <button class="btn" type="button" id="import">Datei laden</button>
+      <input type="file" id="importfile" accept=".json,application/json" hidden>
+      <button class="btn" type="button" id="copy">Zusammenfassung kopieren</button>
+      <button class="btn danger" type="button" id="reset">Alles zurücksetzen</button>
+    </div>
+    <p class="io-msg" id="io-msg" role="status" hidden></p>
+    <p class="note"><b>Kurswahlformular erstellen:</b> Der Planer erzeugt das Kurswahlformular genau so, wie der Schulserver es ausgibt – mit deinem Jahrgang, Namen, deiner Klasse, Schüler-ID und deinen Kreuzen – und lädt es als PDF herunter. Die Kästchen bleiben anklickbar. Kommen in deinem Namen Buchstaben vor, die im Schulformular sonst nicht auftauchen, braucht der Planer die Originalschrift deines Rechners (Chrome oder Edge unter Windows). Drucke es in Originalgröße (100 %) aus und gib es ab.</p>
+    <p class="note">Du kannst deine Wahl als Datei sichern und später auf einem anderen Gerät wieder laden, zum Beispiel für das Gespräch mit dem Päko.</p>
+    <p class="note">Dieser Planer ersetzt nicht die Beratung durch den Pädagogischen Koordinator und nicht den offiziellen digitalen Kurswahlbogen im Lernraum. Grundlage: Kursangebot 19.11.2025, Sportangebot 10.12.2025, VO-GO §§ 23, 25, 26, AV Prüfungen Anlage 6a.</p>
+  </div>
+</section>
+
+</main>
+
+<div class="statusbar">
+  <div class="in">
+    <div class="sb-stats">
+      <span>Kurse <b id="sb-k">0</b><span style="color:var(--ink-3)">/40</span></span>
+      <span>Wochenstunden <b id="sb-h">0</b><span style="color:var(--ink-3)">/66</span></span>
+      <span>Einbringen GK <b id="sb-e">0</b><span style="color:var(--ink-3)">/24</span></span>
+    </div>
+    <button class="sb-state warn" type="button" id="sb-state">Noch unvollständig</button>
+  </div>
+</div>
+
+<div id="printview" aria-hidden="true"></div>
+
+<script src="assets/form-template.js"></script>
+<script src="assets/planer.js"></script>
+</body>
+</html>
