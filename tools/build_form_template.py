@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Erzeugt die eingebettete Formularvorlage des Kurswahl-Planers aus einer Kurswahl-PDF der Schule.
 
-Aufruf:  python3 tools/build_form_template.py <Kurswahl-PDF der Schule> [kurswahl-planer.html]
+Aufruf:  python3 tools/build_form_template.py <Kurswahl-PDF der Schule> [Zieldatei]
 
 Die PDF wird in unveränderliche Objekte (byte-genau übernommen) und veränderliche Objekte zerlegt:
 Seiteninhalt mit Jahrgang/Name/Klasse, die drei Schrift-Teilmengen samt Breiten und ToUnicode,
@@ -9,7 +9,7 @@ die versteckten Felder SchuelerId/AbiturJahrgangId, Datum/Metadaten und die Kreu
 Persönliche Daten der Vorlage (Name, Klasse, IDs, Datum) werden nicht übernommen: Die veränderlichen
 Stellen werden durch Platzhalter ersetzt, von den Schriften werden nur Tabellen und Glyphen gespeichert.
 
-Das Ergebnis wird zwischen den Markierungen FORM-TEMPLATE-BEGIN/END in die HTML-Datei geschrieben,
+Das Ergebnis wird nach public/assets/form-template.js geschrieben,
 zusammen mit dem zlib-ng-WebAssembly aus tools/zlib-ng-wasm/zng.wasm.
 """
 import base64, json, re, struct, sys, zlib
@@ -92,7 +92,7 @@ def main():
     if len(sys.argv) < 2:
         die(__doc__)
     pdf = Pdf(Path(sys.argv[1]).read_bytes())
-    html_path = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'kurswahl-planer.html'
+    out_path = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'public/assets/form-template.js'
     wasm = (ROOT / 'tools/zlib-ng-wasm/zng.wasm').read_bytes()
 
     # Kompressor prüfen: jeder Flate-Stream der Vorlage muss sich mit zlib-ng Level 6 reproduzieren lassen.
@@ -318,12 +318,7 @@ def main():
     js = ('const FORM_TPL=' + json.dumps(tpl, ensure_ascii=True, separators=(',', ':')) + ';\n'
           + f"const FORM_BLOB_B64='{base64.b64encode(packed).decode()}'; // {len(blob)} Bytes entpackt\n"
           + f"const ZNG_WASM_B64='{base64.b64encode(wasm).decode()}';\n")
-    html = html_path.read_text(encoding='utf-8')
-    a, b = '// FORM-TEMPLATE-BEGIN (erzeugt von tools/build_form_template.py, nicht von Hand ändern)\n', '// FORM-TEMPLATE-END\n'
-    if a not in html or b not in html:
-        die('Markierungen FORM-TEMPLATE-BEGIN/END fehlen in ' + str(html_path))
-    html = html[:html.index(a) + len(a)] + js + html[html.index(b):]
-    html_path.write_text(html, encoding='utf-8')
+    out_path.write_text('// Erzeugt von tools/build_form_template.py – nicht von Hand ändern.\n' + js, encoding='utf-8')
     print(f'Vorlage geschrieben: {len(pdf.order)} Objekte, {len(dynamic)} veränderlich, '
           f'Daten {len(blob)} → {len(packed)} Bytes, WebAssembly {len(wasm)} Bytes')
 

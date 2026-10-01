@@ -1,0 +1,101 @@
+services:
+  db:
+    image: mariadb:11.4
+    container_name: kurswahl-db
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Berlin
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MYSQL_DATABASE: ${DB_NAME:-kurswahl}
+      MYSQL_USER: ${DB_USER:-kurswahl}
+      MYSQL_PASSWORD: ${DB_PASS}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    build: .
+    image: kurswahl-app
+    container_name: kurswahl-app
+    ports:
+      - "${APP_PORT:-9020}:80"
+    environment: &appenv
+      TZ: Europe/Berlin
+      DB_HOST: db
+      DB_USER: ${DB_USER:-kurswahl}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME:-kurswahl}
+      APP_ENV: ${APP_ENV:-production}
+      BASE_URL: ${BASE_URL:-/}
+      DB_WAIT_TIMEOUT: ${DB_WAIT_TIMEOUT:-120}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      SECURE_COOKIES: ${SECURE_COOKIES:-}
+      ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      IMPORT_INTERVAL: ${IMPORT_INTERVAL:-15}
+    volumes:
+      - uploads:/var/www/html/uploads
+      - ${IMPORT_PATH:-./import}:/var/www/html/import
+    # "default" muss ausdrücklich dabeistehen, sonst erreicht die App die Datenbank nicht mehr
+    networks:
+      - default
+      - proxy_network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1/healthz') === 'ok' ? 0 : 1);"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging: *logging
+
+  # Liest hochgeladene PDFs und den Import-Ordner im Hintergrund ein
+  worker:
+    image: kurswahl-app
+    container_name: kurswahl-worker
+    user: www-data
+    command: ["php", "/var/www/html/bin/worker.php"]
+    environment: *appenv
+    volumes:
+      - uploads:/var/www/html/uploads
+      - ${IMPORT_PATH:-./import}:/var/www/html/import
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    restart: unless-stopped
+    logging: *logging
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: kurswahl-phpmyadmin
+    profiles: ["tools"]
+    restart: unless-stopped
+    ports:
+      - "${PMA_PORT:-8091}:80"
+    environment:
+      PMA_HOST: db
+    depends_on:
+      - db
+
+networks:
+  # Wird vom Reverse-Proxy bereitgestellt und muss vorher existieren
+  proxy_network:
+    external: true
+
+volumes:
+  db_data:
+  uploads:

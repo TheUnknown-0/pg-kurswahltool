@@ -1,0 +1,7 @@
+.git
+.env
+uploads/*
+import/*
+node_modules
+tools
+*.md
