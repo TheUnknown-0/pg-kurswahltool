@@ -23,6 +23,7 @@ final class HttpException extends \RuntimeException
             404 => 'Seite nicht gefunden.',
             405 => 'Methode nicht erlaubt.',
             419 => 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.',
+            423 => 'Gesperrt.',
             429 => 'Zu viele Anfragen. Bitte warte einen Moment.',
             default => 'Es ist ein Fehler aufgetreten.',
         };

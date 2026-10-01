@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\HttpException;
+use App\Services\Deadline;
 use App\Services\LoginName;
 use App\Services\LoginThrottle;
 
@@ -37,6 +38,9 @@ final class AuthController extends Controller
             $throttle->recordFailure($login, $ip);
 
             return $this->ctx->view->render('login', ['title' => 'Anmelden', 'error' => 'Login oder Passwort ist falsch.', 'login' => $login]);
+        }
+        if ($user['role'] === 'student' && (new Deadline($this->ctx->db))->loginBlocked()) {
+            return $this->ctx->view->render('login', ['title' => 'Anmelden', 'error' => 'Die Abgabefrist ist abgelaufen. Die Anmeldung ist geschlossen.', 'login' => $login]);
         }
         if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT)) {
             $this->ctx->db->run('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $user['id']]);

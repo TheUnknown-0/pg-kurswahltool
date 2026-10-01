@@ -2,6 +2,7 @@
 /**
  * @var array $stats @var list<array> $students @var list<array> $unassigned @var list<array> $studentOptions
  * @var list<array> $log @var list<array> $flashes @var string $q @var string $filter
+ * @var array{deadline: ?string, mode: string} $deadline @var array<string, string> $deadlineModes
  */
 $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) : '–';
 ?>
@@ -24,6 +25,7 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
       <div class="stat"><b data-k="with_pdf"><?= $stats['with_pdf'] ?></b>mit Schul-PDF</div>
       <div class="stat"><b data-k="unassigned"><?= $stats['unassigned'] ?></b>PDFs ohne Konto</div>
       <div class="stat"><b data-k="saved"><?= $stats['saved'] ?></b>Wahlen gespeichert</div>
+      <div class="stat"><b data-k="submitted"><?= $stats['submitted'] ?></b>abgegeben</div>
       <div class="stat"><b data-k="queue"><?= $stats['queue'] + $stats['folder'] ?></b>Dateien warten auf Import</div>
     </div>
     <p class="msg <?= $stats['worker_ok'] ? 'ok' : 'warn' ?> small" id="worker" style="margin-top:14px">
@@ -56,6 +58,40 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
         <input type="file" name="csv" accept=".csv,.txt,text/csv" required>
         <p><button class="btn primary" type="submit">Importieren</button></p>
       </form>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Abgabefrist</h2>
+      <?php $expired = $deadline['deadline'] !== null && strtotime($deadline['deadline']) <= time(); ?>
+      <p class="muted small">
+        <?php if ($deadline['deadline'] === null): ?>Keine Frist gesetzt – Schüler können jederzeit ändern und abgeben.
+        <?php else: ?>Frist: <b><?= e(date('d.m.Y, H:i', (int) strtotime($deadline['deadline']))) ?> Uhr</b><?= $expired ? ' – <b>abgelaufen</b>' : '' ?>.
+        <?php endif; ?>
+        Abgegebene Wahlen sind immer gesperrt, bis du sie in der Liste freischaltest.</p>
+      <form method="post" action="<?= e($ctx->url('/admin/settings')) ?>">
+        <?= $csrf->field() ?>
+        <label for="deadline">Abgabe bis</label>
+        <input type="datetime-local" id="deadline" name="deadline" value="<?= $deadline['deadline'] ? e(date('Y-m-d\TH:i', (int) strtotime($deadline['deadline']))) : '' ?>">
+        <label for="mode">Nach Ablauf der Frist</label>
+        <select id="mode" name="mode">
+          <?php foreach ($deadlineModes as $k => $label): ?><option value="<?= e($k) ?>" <?= $deadline['mode'] === $k ? 'selected' : '' ?>><?= e($label) ?></option><?php endforeach; ?>
+        </select>
+        <p><button class="btn primary" type="submit">Speichern</button> <span class="muted small">Datum leeren = keine Frist</span></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Export</h2>
+      <p class="muted small">Formulare: jede Kurswahl-PDF des Schulservers mit den Kreuzen der gespeicherten Wahl, byte-gleich
+        zum Original und unter dem Original-Dateinamen. Ohne gespeicherte Wahl bleibt die PDF unausgefüllt (siehe <code>Hinweise.txt</code> im ZIP).</p>
+      <p>
+        <a class="btn primary" href="<?= e($ctx->url('/admin/export/formulare')) ?>">Alle Formulare (ZIP)</a>
+        <a class="btn" href="<?= e($ctx->url('/admin/export/formulare?nur=abgegeben')) ?>">Nur abgegebene (ZIP)</a>
+      </p>
+      <p class="muted small">Wahlen als Tabelle (Excel): Status, Fehler, Prüfungsfächer und Kurse je Halbjahr.</p>
+      <p><a class="btn" href="<?= e($ctx->url('/admin/export/wahlen')) ?>">Alle Wahlen (CSV)</a></p>
     </section>
   </div>
 
@@ -112,11 +148,14 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
         <option value="">alle</option>
         <option value="ohne-pdf" <?= $filter === 'ohne-pdf' ? 'selected' : '' ?>>ohne Schul-PDF</option>
         <option value="ohne-wahl" <?= $filter === 'ohne-wahl' ? 'selected' : '' ?>>ohne gespeicherte Wahl</option>
+        <option value="abgegeben" <?= $filter === 'abgegeben' ? 'selected' : '' ?>>abgegeben</option>
+        <option value="nicht-abgegeben" <?= $filter === 'nicht-abgegeben' ? 'selected' : '' ?>>nicht abgegeben</option>
+        <option value="fehler" <?= $filter === 'fehler' ? 'selected' : '' ?>>Wahl mit Fehlern</option>
       </select>
       <button class="btn sm" type="submit">Filtern</button>
     </form>
     <div class="tablewrap"><table>
-      <tr><th>Login</th><th>Name (PDF)</th><th>Klasse</th><th>Schul-PDF</th><th>Wahl gespeichert</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr>
+      <tr><th>Login</th><th>Name (PDF)</th><th>Klasse</th><th>Schul-PDF</th><th>Wahl</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr>
       <?php foreach ($students as $s): ?>
       <tr>
         <td><code><?= e($s['login']) ?></code></td>
@@ -128,7 +167,21 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
             <?= $csrf->field() ?><input type="hidden" name="user_id" value="0"><button class="btn sm" type="submit">lösen</button>
           </form>
         <?php else: ?><span class="muted">fehlt</span><?php endif; ?></td>
-        <td><?= e($fmt($s['saved_at'])) ?></td>
+        <td>
+          <?php if ($s['submitted_at']): ?><span class="tag importiert">abgegeben</span> <?= e($fmt($s['submitted_at'])) ?>
+          <?php elseif ($s['saved_at']): ?>gespeichert <?= e($fmt($s['saved_at'])) ?>
+          <?php else: ?><span class="muted">keine</span><?php endif; ?>
+          <?php if ($s['errors'] !== null && (int) $s['errors'] > 0): ?><br><span class="tag fehler"><?= (int) $s['errors'] ?> Fehler</span>
+          <?php elseif ($s['errors'] !== null): ?><br><span class="tag importiert">zulässig</span><?php endif; ?>
+          <?php if ($s['saved_at']): ?><br><a href="<?= e($ctx->url('/admin/students/' . $s['id'])) ?>">ansehen</a>
+            <?php if ($s['pdf_id']): ?> · <a href="<?= e($ctx->url('/admin/students/' . $s['id'] . '/form')) ?>">Formular</a><?php endif; ?>
+          <?php endif; ?>
+          <?php if ($s['submitted_at']): ?>
+            <form method="post" action="<?= e($ctx->url('/admin/students/' . $s['id'] . '/unlock')) ?>" class="inline" data-confirm="Wahl von <?= e($s['login']) ?> wieder freischalten?">
+              <?= $csrf->field() ?><button class="btn sm" type="submit">freischalten</button>
+            </form>
+          <?php endif; ?>
+        </td>
         <td><?= e($fmt($s['last_login_at'])) ?></td>
         <td>
           <form method="post" action="<?= e($ctx->url('/admin/users/' . $s['id'] . '/password')) ?>" class="inline">
