@@ -67,3 +67,5 @@ th{color:var(--ink-2);font-weight:650;background:var(--paper-2)}
 .filters input,.filters select{width:auto;max-width:280px}
 code{background:var(--blue-tint);border-radius:4px;padding:1px 5px;font-size:.9em}
 @media (max-width:640px){.top{flex-direction:column-reverse;align-items:flex-start}.logo{width:150px}}
+.addform{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px;align-items:end}
+.addform label{margin-top:0}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\HttpException;
+use App\Services\LoginName;
 use App\Services\PdfImporter;
 use App\Services\UserImport;
 
@@ -132,6 +133,39 @@ final class AdminController extends Controller
         if (count($r['errors']) > 30) {
             $this->ctx->session->flash('error', '… und ' . (count($r['errors']) - 30) . ' weitere Fehler.');
         }
+
+        return $this->redirect('/admin');
+    }
+
+    /** Einzelnes Schülerkonto von Hand anlegen; eine passende PDF wird gleich zugeordnet. */
+    public function createUser(): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $this->verifyCsrf();
+        $name = trim((string) ($_POST['name'] ?? ''));
+        $login = LoginName::normalize((string) ($_POST['login'] ?? ''));
+        $pw = (string) ($_POST['password'] ?? '');
+        if ($login === '') {
+            $login = LoginName::fromName($name);
+        }
+        $error = match (true) {
+            $login === '' => 'Gib einen Namen oder Login an.',
+            !preg_match('/^[a-z0-9-]+(\.[a-z0-9-]+)?$/', $login) => "Ungültiger Login „{$login}“ (nur a–z, 0–9, Bindestrich, ein Punkt).",
+            strlen($pw) < 4 => 'Das Passwort muss mindestens 4 Zeichen haben.',
+            $this->ctx->db->fetchValue('SELECT id FROM users WHERE login = ?', [$login]) !== null => "Das Konto {$login} gibt es schon.",
+            default => null,
+        };
+        if ($error !== null) {
+            $this->ctx->session->flash('error', $error);
+
+            return $this->redirect('/admin');
+        }
+        $this->ctx->db->run(
+            "INSERT INTO users (login, password_hash, role, display_name) VALUES (?, ?, 'student', ?)",
+            [$login, password_hash($pw, PASSWORD_DEFAULT), mb_substr($name, 0, 160)],
+        );
+        $matched = (new PdfImporter($this->ctx->db))->rematch();
+        $this->ctx->session->flash('ok', "Konto {$login} angelegt." . ($matched > 0 ? ' Seine Kurswahl-PDF wurde zugeordnet.' : ' Noch keine passende PDF vorhanden.'));
 
         return $this->redirect('/admin');
     }
