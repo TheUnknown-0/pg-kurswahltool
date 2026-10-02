@@ -69,7 +69,9 @@ code{background:var(--blue-tint);border-radius:4px;padding:1px 5px;font-size:.9e
 @media (max-width:640px){.top{flex-direction:column-reverse;align-items:flex-start}.logo{width:150px}}
 .addform{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px;align-items:end}
 .addform label{margin-top:0}
-.pflichtgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:4px 22px}
-.pflicht{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0;padding:6px 0;border-bottom:1px solid var(--line);font-weight:600}
-.pflicht span{flex:1;min-width:0}
-.pflicht select{width:auto;flex-shrink:0;padding:5px 8px;font-size:.9rem;font-weight:400}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.tab{padding:7px 13px;border-radius:7px;background:var(--paper-3);color:var(--ink);text-decoration:none;font-weight:650;font-size:.9rem}
+.tab.on{background:var(--blue);color:#fff}
+.pgrid{max-width:620px}
+.pgrid th:not(:first-child),.pgrid td:not(:first-child){text-align:center;width:70px}
+.pbox{width:22px;height:22px;accent-color:var(--blue);cursor:pointer}

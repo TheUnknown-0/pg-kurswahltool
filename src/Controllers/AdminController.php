@@ -68,7 +68,7 @@ final class AdminController extends Controller
             'flashes' => $this->ctx->session->pullFlashes(),
             'deadline' => (new Deadline($db))->settings(),
             'deadlineModes' => Deadline::MODES,
-            'pflicht' => (new Pflicht($db))->options(),
+            'pflicht' => $this->pflichtView(),
             'q' => $q,
             'filter' => $filter,
         ]);
@@ -276,11 +276,14 @@ final class AdminController extends Controller
     {
         $this->ctx->auth->requireAdmin();
         $this->verifyCsrf();
-        $choice = is_array($_POST['pflicht'] ?? null) ? array_map('strval', $_POST['pflicht']) : [];
-        (new Pflicht($this->ctx->db))->save($choice);
-        $this->ctx->session->flash('ok', 'Pflichtkurse gespeichert. Sie gelten ab dem nächsten Öffnen des Planers (abgegebene Wahlen bleiben unverändert).');
+        $jg = trim((string) ($_POST['jg'] ?? ''));
+        $marks = is_array($_POST['pflicht'] ?? null) ? $_POST['pflicht'] : [];
+        (new Pflicht($this->ctx->db))->save($jg === '' ? null : $jg, $marks);
+        $this->ctx->session->flash('ok', $jg === ''
+            ? 'Vorlage gespeichert. Sie gilt für Jahrgänge, die ab jetzt neu dazukommen, und für Schüler ohne Schul-PDF.'
+            : "Pflichtkurse für {$jg} gespeichert. Sie gelten ab dem nächsten Öffnen des Planers (abgegebene Wahlen bleiben unverändert).");
 
-        return $this->redirect('/admin');
+        return $this->redirect('/admin?jg=' . rawurlencode($jg) . '#pflicht');
     }
 
     /** Planer mit der Wahl des Schülers, nur lesend. */
@@ -452,6 +455,23 @@ final class AdminController extends Controller
         $keys = is_array($sum['fieldKeys'] ?? null) ? array_values(array_map('strval', $sum['fieldKeys'])) : null;
 
         return [SchoolPdfPatcher::patch((string) $r['pdf'], array_values(array_map('strval', $sum['checks'])), $pk, $keys), null];
+    }
+
+    /** @return array{jahrgaenge: list<string>, selected: string, grid: array<string, list<int>>} */
+    private function pflichtView(): array
+    {
+        $svc = new Pflicht($this->ctx->db);
+        $jahrgaenge = $svc->jahrgaenge();
+        $selected = (string) ($_GET['jg'] ?? ($jahrgaenge[0] ?? ''));
+        if ($selected !== '' && !in_array($selected, $jahrgaenge, true)) {
+            $selected = '';
+        }
+
+        return [
+            'jahrgaenge' => $jahrgaenge,
+            'selected' => $selected,
+            'grid' => Pflicht::grid($selected === '' ? $svc->preset() : $svc->forJahrgang($selected)),
+        ];
     }
 
     /** @return array<string, mixed> */

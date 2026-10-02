@@ -95,26 +95,44 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
     </section>
   </div>
 
-  <section class="card">
+  <section class="card" id="pflicht">
     <h2>Pflichtkurse</h2>
-    <p class="muted small">Diese Kurse kreuzt der Planer bei jedem Schüler fest an. Für Geschichte und Politikwissenschaft
-      darf stattdessen der bilinguale Kurs gewählt werden – regulär und bilingual schließen sich gegenseitig aus.
-      Deutsch und Mathematik in allen vier Halbjahren prüft der Planer unabhängig davon (VO-GO).</p>
+    <p class="muted small">Angekreuzte Kurse setzt der Planer bei jedem Schüler des Jahrgangs fest. Ein Kreuz gilt immer für den
+      Halbjahresblock (Q1+Q2 bzw. Q3+Q4). Für Geschichte und Politikwissenschaft darf stattdessen der bilinguale Kurs gewählt
+      werden; regulär und bilingual schließen sich aus. Deutsch und Mathematik in allen vier Halbjahren prüft der Planer
+      unabhängig davon (VO-GO).</p>
+    <nav class="tabs">
+      <?php foreach ($pflicht['jahrgaenge'] as $jg): ?>
+        <a class="tab <?= $pflicht['selected'] === $jg ? 'on' : '' ?>" href="<?= e($ctx->url('/admin?jg=' . rawurlencode($jg) . '#pflicht')) ?>"><?= e($jg) ?></a>
+      <?php endforeach; ?>
+      <a class="tab <?= $pflicht['selected'] === '' ? 'on' : '' ?>" href="<?= e($ctx->url('/admin?jg=#pflicht')) ?>">Vorlage für neue Jahrgänge</a>
+    </nav>
+    <p class="muted small">
+      <?php if ($pflicht['selected'] === ''): ?>
+        Die Vorlage wird kopiert, sobald ein Jahrgang zum ersten Mal auftaucht (z. B. beim Import seiner PDFs). Änderungen hier wirken
+        nicht auf bestehende Jahrgänge. Schüler ohne Schul-PDF bekommen die Vorlage.
+      <?php else: ?>
+        Gilt nur für Schüler, deren Schul-PDF den Jahrgang <b><?= e($pflicht['selected']) ?></b> trägt.
+      <?php endif; ?>
+    </p>
     <form method="post" action="<?= e($ctx->url('/admin/pflicht')) ?>">
       <?= $csrf->field() ?>
-      <div class="pflichtgrid">
+      <input type="hidden" name="jg" value="<?= e($pflicht['selected']) ?>">
+      <div class="tablewrap"><table class="pgrid">
+        <tr><th>Fach</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr>
         <?php foreach (\App\Services\Pflicht::SUBJECTS as $id => [$name, $allowed, $bili]): ?>
-          <label class="pflicht"><span><?= e($name) ?><?= $bili ? ' <small class="muted">(oder bilingual)</small>' : '' ?></span>
-            <select name="pflicht[<?= e($id) ?>]">
-              <?php foreach (\App\Services\Pflicht::OPTIONS as $k => $label):
-                if ($k !== '' && array_diff(array_map('intval', str_split((string) $k)), $allowed) !== []) { continue; } ?>
-                <option value="<?= e($k) ?>" <?= $pflicht[$id] === (string) $k ? 'selected' : '' ?>><?= e($label) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </label>
+          <tr>
+            <td><?= e($name) ?><?= $bili ? ' <small class="muted">(oder bilingual)</small>' : '' ?></td>
+            <?php for ($q = 1; $q <= 4; $q++): ?>
+              <td><?php if (in_array($q, $allowed, true)): ?>
+                <input type="checkbox" class="pbox" name="pflicht[<?= e($id) ?>][]" value="<?= $q ?>" data-pair="<?= e($id) ?>-<?= $q <= 2 ? 1 : 2 ?>"
+                  aria-label="<?= e($name) ?> Q<?= $q ?>" <?= in_array($q, $pflicht['grid'][$id], true) ? 'checked' : '' ?>>
+              <?php endif; ?></td>
+            <?php endfor; ?>
+          </tr>
         <?php endforeach; ?>
-      </div>
-      <p><button class="btn primary" type="submit">Pflichtkurse speichern</button></p>
+      </table></div>
+      <p><button class="btn primary" type="submit"><?= $pflicht['selected'] === '' ? 'Vorlage speichern' : 'Pflichtkurse für ' . e($pflicht['selected']) . ' speichern' ?></button></p>
     </form>
   </section>
 
