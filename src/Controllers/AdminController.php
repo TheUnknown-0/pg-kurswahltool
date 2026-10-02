@@ -277,6 +277,9 @@ final class AdminController extends Controller
         $this->ctx->auth->requireAdmin();
         $this->verifyCsrf();
         $jg = trim((string) ($_POST['jg'] ?? ''));
+        if ($jg !== '' && !in_array($jg, (new Pflicht($this->ctx->db))->jahrgaenge(), true)) {
+            throw new HttpException(400, 'Unbekannter Jahrgang.');
+        }
         $marks = is_array($_POST['pflicht'] ?? null) ? $_POST['pflicht'] : [];
         (new Pflicht($this->ctx->db))->save($jg === '' ? null : $jg, $marks);
         $this->ctx->session->flash('ok', $jg === ''
@@ -457,7 +460,7 @@ final class AdminController extends Controller
         return [SchoolPdfPatcher::patch((string) $r['pdf'], array_values(array_map('strval', $sum['checks'])), $pk, $keys), null];
     }
 
-    /** @return array{jahrgaenge: list<string>, selected: string, grid: array<string, list<int>>} */
+    /** @return array{jahrgaenge: list<string>, selected: string, grid: array<string, list<int>>, stored: bool} */
     private function pflichtView(): array
     {
         $svc = new Pflicht($this->ctx->db);
@@ -470,7 +473,9 @@ final class AdminController extends Controller
         return [
             'jahrgaenge' => $jahrgaenge,
             'selected' => $selected,
-            'grid' => Pflicht::grid($selected === '' ? $svc->preset() : $svc->forJahrgang($selected)),
+            // Anzeigen legt nichts fest: ein neuer Jahrgang folgt der Vorlage, bis er gespeichert oder importiert wird
+            'grid' => Pflicht::grid($selected === '' ? $svc->preset() : $svc->peek($selected)),
+            'stored' => $selected === '' || $svc->isStored($selected),
         ];
     }
 
