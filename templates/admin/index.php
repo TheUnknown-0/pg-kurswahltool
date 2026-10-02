@@ -103,7 +103,7 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
       unabhängig davon (VO-GO).</p>
     <nav class="tabs">
       <?php foreach ($pflicht['jahrgaenge'] as $jg): ?>
-        <a class="tab <?= $pflicht['selected'] === $jg ? 'on' : '' ?>" href="<?= e($ctx->url('/admin?jg=' . rawurlencode($jg) . '#pflicht')) ?>"><?= e($jg) ?></a>
+        <a class="tab <?= $pflicht['selected'] === $jg ? 'on' : '' ?>" title="<?= e($jg) ?>" href="<?= e($ctx->url('/admin?jg=' . rawurlencode($jg) . '#pflicht')) ?>"><?= e($jg) ?></a>
       <?php endforeach; ?>
       <a class="tab <?= $pflicht['selected'] === '' ? 'on' : '' ?>" href="<?= e($ctx->url('/admin?jg=#pflicht')) ?>">Vorlage für neue Jahrgänge</a>
     </nav>
@@ -113,6 +113,10 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
         nicht auf bestehende Jahrgänge. Schüler ohne Schul-PDF bekommen die Vorlage.
       <?php else: ?>
         Gilt nur für Schüler, deren Schul-PDF den Jahrgang <b><?= e($pflicht['selected']) ?></b> trägt.
+        <?php if (!$pflicht['stored']): ?>
+          <br><b>Noch nicht festgelegt:</b> angezeigt wird die Vorlage. Der Jahrgang folgt ihr, bis du hier speicherst
+          oder seine ersten PDFs importiert werden.
+        <?php endif; ?>
       <?php endif; ?>
     </p>
     <form method="post" action="<?= e($ctx->url('/admin/pflicht')) ?>">

@@ -74,8 +74,62 @@ final class Pflicht
         return $list;
     }
 
-    /** Alle bekannten Jahrgänge: aus den Schul-PDFs und bereits angelegten Einstellungen, neueste zuerst. */
+    /** Wie viele Abiturjahrgänge ab dem aktuellen im Voraus einstellbar sind. */
+    public const YEARS_AHEAD = 3;
+
+    /**
+     * Aktueller Abiturjahrgang und die folgenden (Schuljahreswechsel im August),
+     * z. B. im Herbst 2026: Abitur 2026/27, 2027/28, 2028/29.
+     *
+     * @return list<string>
+     */
+    public static function upcoming(?\DateTimeInterface $now = null): array
+    {
+        $now ??= new \DateTimeImmutable();
+        $y = (int) $now->format('Y') - ((int) $now->format('n') >= 8 ? 0 : 1);
+        $out = [];
+        for ($i = 0; $i < self::YEARS_AHEAD; $i++) {
+            $out[] = sprintf('Abitur %d/%02d', $y + $i, ($y + $i + 1) % 100);
+        }
+
+        return $out;
+    }
+
+    /** Ist für diesen Jahrgang schon etwas festgelegt (gespeichert oder aus der Vorlage kopiert)? */
+    public function isStored(string $jahrgang): bool
+    {
+        return $this->get(self::PREFIX . $jahrgang) !== null;
+    }
+
+    /** Pflichtkurse zur Anzeige, ohne einen noch nicht festgelegten Jahrgang festzuschreiben. */
+    public function peek(string $jahrgang): array
+    {
+        $raw = $this->get(self::PREFIX . $jahrgang);
+
+        return $raw === null ? $this->preset() : self::clean(json_decode($raw, true));
+    }
+
+    /**
+     * Einstellbare Jahrgänge: der aktuelle, die folgenden und alle späteren, für die es schon PDFs oder
+     * Einstellungen gibt (aufsteigend), danach ältere Jahrgänge (neueste zuerst).
+     *
+     * @return list<string>
+     */
     public function jahrgaenge(): array
+    {
+        $upcoming = self::upcoming();
+        $all = array_values(array_unique(array_merge($upcoming, $this->known())));
+        $current = $upcoming[0];
+        $later = array_values(array_filter($all, static fn (string $j): bool => strnatcmp($j, $current) >= 0));
+        $older = array_values(array_filter($all, static fn (string $j): bool => strnatcmp($j, $current) < 0));
+        sort($later, SORT_NATURAL);
+        rsort($older, SORT_NATURAL);
+
+        return array_merge($later, $older);
+    }
+
+    /** @return list<string> Jahrgänge aus Schul-PDFs und Einstellungen */
+    private function known(): array
     {
         $fromPdfs = $this->db->fetchAll("SELECT DISTINCT jahrgang FROM school_pdfs WHERE jahrgang <> ''");
         $fromSettings = $this->db->fetchAll('SELECT name FROM settings WHERE name LIKE ?', [self::PREFIX . '%']);
@@ -83,10 +137,7 @@ final class Pflicht
             array_column($fromPdfs, 'jahrgang'),
             array_map(static fn (array $r): string => substr($r['name'], strlen(self::PREFIX)), $fromSettings),
         );
-        $all = array_values(array_unique($all));
-        rsort($all, SORT_NATURAL);
-
-        return $all;
+        return array_values(array_unique($all));
     }
 
     /**
