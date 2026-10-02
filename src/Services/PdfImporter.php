@@ -97,6 +97,7 @@ final class PdfImporter
 
         // Neuer Jahrgang: Pflichtkurse aus der aktuellen Vorlage übernehmen (danach unabhängig von ihr)
         (new Pflicht($this->db))->forJahrgang($info['jahrgang']);
+        (new Kursangebot($this->db))->forJahrgang($info['jahrgang']);
 
         $loginKey = LoginName::fromName($info['name']);
         $userId = $this->db->fetchValue('SELECT id FROM users WHERE login = ? AND role = ?', [$loginKey, 'student']);
