@@ -6,7 +6,6 @@ namespace App\Controllers;
 
 use App\Core\HttpException;
 use App\Services\AdminLog;
-use App\Services\Datenschutz;
 use App\Services\Deadline;
 use App\Services\LoginName;
 use App\Services\PlanerPage;
@@ -428,7 +427,7 @@ final class AdminController extends Controller
         return $u;
     }
 
-    /** Einstellungen: Abgabefrist und Datenschutzhinweis */
+    /** Einstellungen: Abgabefrist */
     public function settings(): string
     {
         $this->ctx->auth->requireAdmin();
@@ -438,19 +437,7 @@ final class AdminController extends Controller
             'flashes' => $this->ctx->session->pullFlashes(),
             'deadline' => (new Deadline($this->ctx->db))->settings(),
             'deadlineModes' => Deadline::MODES,
-            'datenschutz' => Datenschutz::text($this->ctx->db),
         ]);
-    }
-
-    public function saveDatenschutz(): string
-    {
-        $this->ctx->auth->requireAdmin();
-        $this->verifyCsrf();
-        Datenschutz::save($this->ctx->db, (string) ($_POST['text'] ?? ''));
-        AdminLog::add($this->ctx, 'datenschutz');
-        $this->ctx->session->flash('ok', 'Datenschutzhinweis gespeichert.');
-
-        return $this->redirect('/admin/einstellungen');
     }
 
     /** Protokoll der Admin-Aktionen */

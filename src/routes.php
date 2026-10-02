@@ -18,7 +18,6 @@ return static function (Router $r): void {
     $r->get('/login', [AuthController::class, 'form']);
     $r->post('/login', [AuthController::class, 'login']);
     $r->post('/logout', [AuthController::class, 'logout']);
-    $r->get('/datenschutz', [AccountController::class, 'datenschutz']);
     $r->get('/passwort', [AccountController::class, 'passwordForm']);
     $r->post('/passwort', [AccountController::class, 'savePassword']);
 
@@ -46,7 +45,6 @@ return static function (Router $r): void {
     $r->post('/admin/jahrgaenge/loeschen', [JahrgaengeController::class, 'delete']);
     $r->get('/admin/statistik', [StatistikController::class, 'index']);
     $r->get('/admin/einstellungen', [AdminController::class, 'settings']);
-    $r->post('/admin/datenschutz', [AdminController::class, 'saveDatenschutz']);
     $r->get('/admin/protokoll', [AdminController::class, 'log']);
     $r->get('/admin/students/{id}', [AdminController::class, 'viewStudent']);
     $r->get('/admin/students/{id}/pdf', [AdminController::class, 'studentPdf']);

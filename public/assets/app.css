@@ -79,11 +79,6 @@ code{background:var(--blue-tint);border-radius:4px;padding:1px 5px;font-size:.9e
 .adminnav .tabs{margin:0}
 .narrow{max-width:440px}
 textarea.bigtext{width:100%;border:1px solid var(--line-strong);border-radius:7px;padding:12px;font:15px/1.5 system-ui,sans-serif}
-.prose{max-width:760px}
-.prose h3{margin:1.2em 0 .3em;font-size:1.08rem}
-.prose p,.prose ul{margin:.3em 0 .8em}
-.footer{padding:8px 0 0;font-size:.88rem;color:var(--ink-2)}
-.footer a{color:var(--ink-2)}
 .bar{display:block;height:8px;border-radius:4px;background:var(--blue-tint)}
 .bar i{display:block;height:100%;border-radius:4px;background:var(--blue2)}
 .num{text-align:right;font-variant-numeric:tabular-nums}
