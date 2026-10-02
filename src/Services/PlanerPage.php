@@ -47,6 +47,8 @@ final class PlanerPage
             // Ältere Speicherstände ohne Kurzfassung ergänzt der Planer beim nächsten Öffnen
             'needsSummary' => $sel !== null && $sel['summary'] === null,
             'lock' => $lock,
+            // Pflichtkurse des Jahrgangs aus der Schul-PDF; ohne PDF die Vorlage
+            'pflicht' => (new Pflicht($ctx->db))->forJahrgang($pdf['jahrgang'] ?? null),
             'adminView' => $adminView,
             'readOnly' => $adminView || $lock['locked'],
             'pdfUrl' => $adminView ? "admin/students/{$id}/pdf" : 'api/pdf',
