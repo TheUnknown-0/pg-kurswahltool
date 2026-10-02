@@ -1437,7 +1437,6 @@ function setupAccountBar(){
     out.onsubmit=e=>{ if((dirty||saving) && !confirm('Deine letzte Änderung ist noch nicht gespeichert. Trotzdem abmelden?')) e.preventDefault(); };
     out.append(t,b); bar.append(out);
   }
-  if(SERVER){ const ds=document.createElement('a'); ds.className='kw-ds'; ds.href='datenschutz'; ds.textContent='Datenschutz'; bar.append(ds); }
   document.querySelector('header.hero .wrap').prepend(bar);
   if(localMode()) setSync('local');
   else if(SERVER && lockText()) setSync('locked', lockText());

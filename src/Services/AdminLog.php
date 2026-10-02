@@ -25,7 +25,6 @@ final class AdminLog
         'pflicht' => 'Pflichtkurse geändert',
         'angebot' => 'Kursangebot geändert',
         'jahrgang_geloescht' => 'Jahrgang gelöscht',
-        'datenschutz' => 'Datenschutzhinweis geändert',
         'export' => 'Export',
         'wahl_angesehen' => 'Wahl angesehen',
         'formular' => 'Formular heruntergeladen',

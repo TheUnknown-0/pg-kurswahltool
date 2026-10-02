@@ -303,4 +303,3 @@ body.mode-wizard .hero-card{grid-template-columns:1fr}
 .kw-sync.locked{color:var(--orange);font-weight:650}
 .kw-ro{opacity:.75}
 body.kw-readonly #modebar{display:none}
-.kw-ds{font-size:.85rem;color:var(--ink-2)}

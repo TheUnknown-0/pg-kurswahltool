@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\AdminLog;
-use App\Services\Datenschutz;
 
 /**
- * Eigenes Passwort ändern (Schüler und Admin) und Datenschutzhinweis (öffentlich).
+ * Eigenes Passwort ändern (Schüler und Admin).
  */
 final class AccountController extends Controller
 {
@@ -46,14 +45,6 @@ final class AccountController extends Controller
         $this->ctx->session->flash('ok', 'Dein Passwort wurde geändert.');
 
         return $this->redirect($user['role'] === 'admin' ? '/admin' : '/');
-    }
-
-    public function datenschutz(): string
-    {
-        return $this->ctx->view->render('datenschutz', [
-            'title' => 'Datenschutz',
-            'html' => Datenschutz::html(Datenschutz::text($this->ctx->db)),
-        ]);
     }
 
     private function page(array $user, ?string $error): string

@@ -1,4 +1,4 @@
-<?php /** @var array{deadline: ?string, mode: string} $deadline @var array<string, string> $deadlineModes @var string $datenschutz */ ?>
+<?php /** @var array{deadline: ?string, mode: string} $deadline @var array<string, string> $deadlineModes */ ?>
 <main class="wrap">
   <?= $view->renderPartial('admin/_nav', ['nav' => 'einstellungen', 'flashes' => $flashes]) ?>
 
@@ -22,15 +22,4 @@
     </form>
   </section>
 
-  <section class="card" id="datenschutz">
-    <h2>Datenschutzhinweis</h2>
-    <p class="muted small">Erscheint unter <a href="<?= e($ctx->url('/datenschutz')) ?>">/datenschutz</a> und ist auf der Anmeldeseite und im Planer verlinkt.
-      Der voreingestellte Text ist nur ein Entwurf – bitte von der Schule (Datenschutzbeauftragte/r) prüfen und ergänzen lassen.
-      Leerzeile = neuer Absatz, kurze erste Zeile eines Absatzes = Überschrift, Zeilen mit „- “ = Aufzählung.</p>
-    <form method="post" action="<?= e($ctx->url('/admin/datenschutz')) ?>">
-      <?= $csrf->field() ?>
-      <textarea name="text" rows="22" class="bigtext"><?= e($datenschutz) ?></textarea>
-      <p><button class="btn primary" type="submit">Speichern</button></p>
-    </form>
-  </section>
 </main>
