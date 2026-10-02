@@ -10,6 +10,7 @@ use App\Services\LoginName;
 use App\Services\PlanerPage;
 use App\Services\SchoolPdfPatcher;
 use App\Services\PdfImporter;
+use App\Services\Pflicht;
 use App\Services\UserImport;
 
 /**
@@ -67,6 +68,7 @@ final class AdminController extends Controller
             'flashes' => $this->ctx->session->pullFlashes(),
             'deadline' => (new Deadline($db))->settings(),
             'deadlineModes' => Deadline::MODES,
+            'pflicht' => (new Pflicht($db))->options(),
             'q' => $q,
             'filter' => $filter,
         ]);
@@ -266,6 +268,17 @@ final class AdminController extends Controller
         }
         (new Deadline($this->ctx->db))->save($deadline, $mode);
         $this->ctx->session->flash('ok', $deadline === null ? 'Abgabefrist entfernt.' : 'Abgabefrist gespeichert: ' . date('d.m.Y H:i', (int) strtotime($deadline)) . ' Uhr.');
+
+        return $this->redirect('/admin');
+    }
+
+    public function savePflicht(): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $this->verifyCsrf();
+        $choice = is_array($_POST['pflicht'] ?? null) ? array_map('strval', $_POST['pflicht']) : [];
+        (new Pflicht($this->ctx->db))->save($choice);
+        $this->ctx->session->flash('ok', 'Pflichtkurse gespeichert. Sie gelten ab dem nächsten Öffnen des Planers (abgegebene Wahlen bleiben unverändert).');
 
         return $this->redirect('/admin');
     }

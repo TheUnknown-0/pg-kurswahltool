@@ -96,6 +96,29 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
   </div>
 
   <section class="card">
+    <h2>Pflichtkurse</h2>
+    <p class="muted small">Diese Kurse kreuzt der Planer bei jedem Schüler fest an. Für Geschichte und Politikwissenschaft
+      darf stattdessen der bilinguale Kurs gewählt werden – regulär und bilingual schließen sich gegenseitig aus.
+      Deutsch und Mathematik in allen vier Halbjahren prüft der Planer unabhängig davon (VO-GO).</p>
+    <form method="post" action="<?= e($ctx->url('/admin/pflicht')) ?>">
+      <?= $csrf->field() ?>
+      <div class="pflichtgrid">
+        <?php foreach (\App\Services\Pflicht::SUBJECTS as $id => [$name, $allowed, $bili]): ?>
+          <label class="pflicht"><span><?= e($name) ?><?= $bili ? ' <small class="muted">(oder bilingual)</small>' : '' ?></span>
+            <select name="pflicht[<?= e($id) ?>]">
+              <?php foreach (\App\Services\Pflicht::OPTIONS as $k => $label):
+                if ($k !== '' && array_diff(array_map('intval', str_split((string) $k)), $allowed) !== []) { continue; } ?>
+                <option value="<?= e($k) ?>" <?= $pflicht[$id] === (string) $k ? 'selected' : '' ?>><?= e($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <p><button class="btn primary" type="submit">Pflichtkurse speichern</button></p>
+    </form>
+  </section>
+
+  <section class="card">
     <h2>Schüler hinzufügen</h2>
     <form method="post" action="<?= e($ctx->url('/admin/users/create')) ?>" class="addform">
       <?= $csrf->field() ?>

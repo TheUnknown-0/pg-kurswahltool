@@ -1,6 +1,6 @@
 /* =========================== Daten =========================== */
 const SUBJECTS = [
-  {id:'de', name:'Deutsch', af:1, lk1:true, lk2:true, group:'de', fixed:true, note:'Pflicht in allen vier Halbjahren'},
+  {id:'de', name:'Deutsch', af:1, lk1:true, lk2:true, group:'de'},
   {id:'en', name:'Englisch', af:1, lang:true, lk2:true, group:'fs'},
   {id:'fr', name:'Französisch', af:1, lang:true, lk2:true, group:'fs'},
   {id:'la', name:'Latein', af:1, lang:true, lk2:true, group:'fs'},
@@ -16,7 +16,7 @@ const SUBJECTS = [
   {id:'phi', name:'Philosophie', af:2},
   {id:'psy', name:'Psychologie', af:2, roles:[], sems:[1,2], note:'nur Q1 und Q2, kein Prüfungsfach'},
   {id:'sw', name:'Sozialwissenschaften', af:2, lk2:true, needsWpf:'wpfSw', roles:['lk2'], gk:false, note:'nur als 2. Leistungskurs'},
-  {id:'ma', name:'Mathematik', af:3, lk1:true, lk2:true, group:'ma', fixed:true, note:'Pflicht in allen vier Halbjahren'},
+  {id:'ma', name:'Mathematik', af:3, lk1:true, lk2:true, group:'ma'},
   {id:'ph', name:'Physik', af:3, lk1:true, lk2:true, nw:true},
   {id:'ch', name:'Chemie', af:3, lk1:true, lk2:true, nw:true},
   {id:'bi', name:'Biologie', af:3, lk1:true, lk2:true, nw:true},
@@ -80,6 +80,29 @@ let localProfile = SERVER && BOOT.readOnly ? null : (()=>{ try{ return JSON.pars
 // Nur lesen: Admin-Ansicht, abgegebene Wahl oder abgelaufene Frist
 let readOnly = SERVER && !!BOOT.readOnly;
 const localMode = () => !!localProfile;
+
+/* ---- Pflichtkurse der Schule ----
+   Vom Admin festgelegt (Fach + Halbjahre); ohne Server Deutsch und Mathematik in allen Halbjahren.
+   Ein bilingualer Kurs erfüllt die Pflicht des regulären Fachs. Regulär und bilingual schließen sich aus. */
+const PFLICHT_DEFAULT=[{id:'de',sems:[1,2,3,4]},{id:'ma',sems:[1,2,3,4]}];
+const PFLICHT=(SERVER && Array.isArray(BOOT.pflicht) ? BOOT.pflicht : PFLICHT_DEFAULT)
+  .filter(p=>p && S[p.id] && !S[p.id].twin && Array.isArray(p.sems))
+  .map(p=>({id:p.id, sems:p.sems.map(Number).filter(q=>(S[p.id].sems||[1,2,3,4]).includes(q))}));
+const partnerOf = id => S[id] && S[id].twin ? S[id].twin : ((SUBJECTS.find(x=>x.twin===id)||{}).id || null);
+const pflichtOf = id => PFLICHT.find(p=>p.id===id || (S[id] && S[id].twin===p.id)) || null;
+// Fach, das die Pflicht gerade erfüllt: die bilinguale Variante, sobald sie belegt ist
+// (läuft schon beim ersten normalize(), daher direkt auf st statt über sems()/hasRole())
+const semsOf = id => st.sem[id] || [false,false,false,false];
+const pflichtCarrier = p => { const tw=partnerOf(p.id); return tw && semsOf(tw).some(Boolean) ? tw : p.id; };
+// Durch Pflicht gesperrte Halbjahre dieses Fachs
+const lockedSems = id => { const p=pflichtOf(id); return [0,1,2,3].map(i=>!!p && pflichtCarrier(p)===id && p.sems.includes(i+1)); };
+const semText = qs => qs.length===4 ? 'allen vier Halbjahren' : qs.map(q=>'Q'+q).join(', ').replace(/, (Q\d)$/,' und $1');
+// Reguläres bzw. bilinguales Gegenstück abwählen (Kreuze und Prüfungsfach-Rollen)
+function dropPartner(id){
+  const p=partnerOf(id); if(!p) return;
+  delete st.sem[p];
+  Object.keys(st.roles).forEach(r=>{ if(st.roles[r]===p) st.roles[r]=null; });
+}
 const profile = () => localProfile || (BOOT && BOOT.profile) || null;
 let st = {
   name:'', klasse:'', jahrgang:'', schuelerId:'', langs:{en:'early',fr:'none',la:'none',sp:'none'}, langKl:{en:3},
@@ -185,7 +208,17 @@ function normalize(){
     const allowed = id==='spt' ? [3,4] : (S[id]&&S[id].sems) || [1,2,3,4];
     st.sem[id]=toBlocks(st.sem[id], allowed);
   });
-  SUBJECTS.filter(s=>s.fixed).forEach(s=>{ st.sem[s.id]=ALL4(); });
+  // Regulär und bilingual zugleich (z. B. aus einer geladenen Datei): das Fach mit Rolle bzw. die bilinguale Variante behalten
+  SUBJECTS.filter(s=>s.twin).forEach(s=>{
+    if(!semsOf(s.id).some(Boolean) || !semsOf(s.twin).some(Boolean)) return;
+    const role=id=>Object.values(st.roles).includes(id);
+    dropPartner(role(s.twin) && !role(s.id) ? s.twin : s.id);
+  });
+  PFLICHT.forEach(p=>{
+    const c=pflichtCarrier(p), a=[...semsOf(c)];
+    p.sems.forEach(q=>{ a[q-1]=true; });
+    st.sem[c]=a;
+  });
   Object.keys(st.zusatz).forEach(id=>{
     const z=Z[id]; if(!z){ delete st.zusatz[id]; return; }
     let a=toBlocks(st.zusatz[id], z.sems);
@@ -247,14 +280,16 @@ function setRole(id, r){
     }
   });
   st.roles[r]=id;
+  dropPartner(id);
   const s=S[id];
   if(id==='spo'){ st.sem.spt=[false,false,true,true]; }
   else if(s.gk!==false || r==='lk1' || r==='lk2'){ st.sem[id]=[true,true,true,true]; }
 }
 function toggleSem(id,i){
-  if(S[id] && S[id].fixed) return;
-  const a=[...sems(id)], y=i<2?0:2, on=!(a[y]&&a[y+1]);
+  const a=[...sems(id)], y=i<2?0:2, on=!(a[y]&&a[y+1]), lock=lockedSems(id);
+  if(!on && (lock[y]||lock[y+1])) return;
   a[y]=a[y+1]=on; st.sem[id]=a;
+  if(on) dropPartner(id);
 }
 
 /* =========================== Validation =========================== */
@@ -340,8 +375,11 @@ function evaluate(){
     ok(ge[2]&&ge[3], 'Zusätzlich Geschichte in Q3 und Q4', G2);
   }
   SUBJECTS.filter(s=>s.twin).forEach(s=>{
-    const a=sems(s.id), b=sems(s.twin);
-    if(a.some((v,i)=>v&&b[i])) add('error',`${S[s.twin].name}: regulärer und bilingualer Kurs im selben Halbjahr belegt – nur einer davon`,G2);
+    if(sems(s.id).some(Boolean) && sems(s.twin).some(Boolean)) add('error',`${S[s.twin].name}: entweder regulär oder bilingual belegen, nicht beides`,G2);
+  });
+  PFLICHT.forEach(p=>{
+    const c=pflichtCarrier(p);
+    ok(p.sems.every(q=>sems(c)[q-1]), `${S[p.id].name} in ${semText(p.sems)} (Pflichtkurs der Schule${partnerOf(p.id)?', auch bilingual':''})`, G2);
   });
 
   if(!kfExempt()){
@@ -444,11 +482,11 @@ function renderLangs(){
   });
 }
 
-function qboxes(id, semsArr, allowed, locked, onToggle, disabledAll){
+function qboxes(id, semsArr, allowed, locked, onToggle, disabledAll, lockArr){
   let html='';
   for(let i=0;i<4;i++){
-    const on=semsArr[i]; const dis=disabledAll || !allowed.includes(i+1);
-    html+=`<div class="qwrap"><i>Q${i+1}</i><button type="button" class="qbox ${on?'on':''} ${locked?'lock':''}" data-id="${id}" data-i="${i}" ${dis?'disabled':''} aria-pressed="${on}" aria-label="${S[id]?S[id].name:id} Q${i+1}">${checkSvg()}</button></div>`;
+    const on=semsArr[i], pl=!!(lockArr && lockArr[i] && on), dis=disabledAll || pl || !allowed.includes(i+1);
+    html+=`<div class="qwrap"><i>Q${i+1}</i><button type="button" class="qbox ${on?'on':''} ${locked||pl?'lock':''}" data-id="${id}" data-i="${i}" ${dis?'disabled':''} aria-pressed="${on}" aria-label="${S[id]?S[id].name:id} Q${i+1}${pl?' (Pflicht)':''}">${checkSvg()}</button></div>`;
   }
   return html;
 }
@@ -469,7 +507,9 @@ function renderFaecher(){
         const on=st.roles[r]===s.id; const blocked=roleBlocked(s,r);
         return `<button type="button" class="rchip ${on?'on':''} ${r==='pk5'?'pk':''}" data-role="${r}" data-id="${s.id}" ${(blocked&&!on)?'disabled':''} title="${blocked||''}">${ROLE_LABEL[r]}</button>`;
       }).join('');
-      const note=s.note?`<small>${s.note}</small>`:(s.lang?`<small>${esc(langLabel(s.id))}</small>`:'');
+      const pf=pflichtOf(s.id);
+      const pfNote=pf ? (s.twin ? `erfüllt die Pflicht ${S[s.twin].name} in ${semText(pf.sems)}` : `Pflicht in ${semText(pf.sems)}${partnerOf(s.id)?' (oder bilingual)':''}`) : '';
+      const note=[s.note||(s.lang?esc(langLabel(s.id)):''), pfNote].filter(Boolean).map(t=>`<small>${t}</small>`).join('');
       let boxes='';
       if(s.id==='spo'){
         const sp=sportOff()?[false,false,false,false]:st.sport.map(Boolean);
@@ -477,7 +517,7 @@ function renderFaecher(){
       } else {
         const allowed=s.sems||[1,2,3,4];
         const gkOnly = s.gk===false && !isLK(s.id);
-        boxes=qboxes(s.id,sems(s.id),allowed,isLK(s.id)||!!s.fixed,null,off||gkOnly||!!s.fixed);
+        boxes=qboxes(s.id,sems(s.id),allowed,isLK(s.id),null,off||gkOnly,lockedSems(s.id));
       }
       const n=s.id==='spo'?(sportOff()?0:st.sport.filter(Boolean).length):cnt(s.id);
       row.innerHTML=`<div class="subj"><b>${s.name}</b>${note}</div><div class="roles">${chips}</div>${boxes}<div class="cnt ${n?'has':''}">${n}</div>`;
@@ -792,7 +832,7 @@ $('#importfile').onchange=async e=>{
     showIo('Das ist keine Datei aus dem Kurswahl-Planer.','error'); return;
   }
   if(data.version>EXPORT_VERSION){ showIo('Die Datei stammt aus einer neueren Version des Planers und kann hier nicht geladen werden.','error'); return; }
-  const hasData = st.name || Object.values(st.roles).some(Boolean) || Object.keys(st.sem).some(id=>!(S[id]&&S[id].fixed) && sems(id).some(Boolean)) || st.sport.some(Boolean) || Object.values(st.zusatz).some(a=>a.some(Boolean));
+  const hasData = st.name || Object.values(st.roles).some(Boolean) || Object.keys(st.sem).some(id=>sems(id).some((v,i)=>v && !lockedSems(id)[i])) || st.sport.some(Boolean) || Object.values(st.zusatz).some(a=>a.some(Boolean));
   const who = data.planer.name ? ` von ${String(data.planer.name).slice(0,80)}` : '';
   if(hasData && !confirm(`Die Kurswahl${who} laden? Deine aktuellen Eingaben werden dabei ersetzt.`)) return;
   st=sanitizeImport(data.planer);
@@ -1479,7 +1519,7 @@ const withState = (d, fn) => { const prev=st; st=d; try{ return fn(); } finally{
 const ROLE_ORDER = ['lk1','lk2','pf3','pf4','pk5'];
 const LANG_IDS = ['en','fr','la','sp'];
 const YEAR_LABEL = ['Q1+Q2','Q3+Q4'];
-const planHasData = () => !!st.name || Object.values(st.roles).some(Boolean) || Object.keys(st.sem).some(id=>!(S[id]&&S[id].fixed) && sems(id).some(Boolean)) || st.sport.some(Boolean) || Object.values(st.zusatz).some(a=>a.some(Boolean));
+const planHasData = () => !!st.name || Object.values(st.roles).some(Boolean) || Object.keys(st.sem).some(id=>sems(id).some((v,i)=>v && !lockedSems(id)[i])) || st.sport.some(Boolean) || Object.values(st.zusatz).some(a=>a.some(Boolean));
 
 /* ---- Prüfungsfächer: nur Fächer anbieten, mit denen noch eine zulässige Kombination möglich ist ---- */
 // Spiegelt die Regeln der Gruppe „Prüfungsfächer“ in evaluate(); läuft mit st = Entwurf
@@ -1581,7 +1621,8 @@ function wzCandidates(d){
   return withState(d, ()=>{
     const out=[];
     SUBJECTS.forEach(s=>{
-      if(s.fixed || s.id==='spo' || s.gk===false) return;
+      if(s.id==='spo' || s.gk===false) return;
+      if(partnerOf(s.id) && sems(partnerOf(s.id)).some(Boolean)) return;
       if(s.needsWpf && !st.meta[s.needsWpf]) return;
       if(s.lang && st.langs[s.id]==='none') return;
       const allowed=s.sems||[1,2,3,4], a=sems(s.id);

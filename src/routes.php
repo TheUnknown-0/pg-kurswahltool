@@ -34,6 +34,7 @@ return static function (Router $r): void {
     $r->post('/admin/pdfs/{id}/delete', [AdminController::class, 'deletePdf']);
     $r->get('/admin/pdfs/{id}', [AdminController::class, 'downloadPdf']);
     $r->post('/admin/settings', [AdminController::class, 'saveSettings']);
+    $r->post('/admin/pflicht', [AdminController::class, 'savePflicht']);
     $r->get('/admin/students/{id}', [AdminController::class, 'viewStudent']);
     $r->get('/admin/students/{id}/pdf', [AdminController::class, 'studentPdf']);
     $r->get('/admin/students/{id}/form', [AdminController::class, 'studentForm']);
