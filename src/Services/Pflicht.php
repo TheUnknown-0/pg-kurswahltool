@@ -110,18 +110,22 @@ final class Pflicht
     }
 
     /**
-     * Einstellbare Jahrgänge: der aktuelle und die folgenden (aufsteigend), danach ältere Jahrgänge
-     * aus Schul-PDFs bzw. bisherigen Einstellungen (neueste zuerst).
+     * Einstellbare Jahrgänge: der aktuelle, die folgenden und alle späteren, für die es schon PDFs oder
+     * Einstellungen gibt (aufsteigend), danach ältere Jahrgänge (neueste zuerst).
      *
      * @return list<string>
      */
     public function jahrgaenge(): array
     {
         $upcoming = self::upcoming();
-        $older = array_values(array_diff($this->known(), $upcoming));
+        $all = array_values(array_unique(array_merge($upcoming, $this->known())));
+        $current = $upcoming[0];
+        $later = array_values(array_filter($all, static fn (string $j): bool => strnatcmp($j, $current) >= 0));
+        $older = array_values(array_filter($all, static fn (string $j): bool => strnatcmp($j, $current) < 0));
+        sort($later, SORT_NATURAL);
         rsort($older, SORT_NATURAL);
 
-        return array_merge($upcoming, $older);
+        return array_merge($later, $older);
     }
 
     /** @return list<string> Jahrgänge aus Schul-PDFs und Einstellungen */
