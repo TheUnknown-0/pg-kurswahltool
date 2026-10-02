@@ -2,20 +2,11 @@
 /**
  * @var array $stats @var list<array> $students @var list<array> $unassigned @var list<array> $studentOptions
  * @var list<array> $log @var list<array> $flashes @var string $q @var string $filter
- * @var array{deadline: ?string, mode: string} $deadline @var array<string, string> $deadlineModes
  */
 $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) : '–';
 ?>
 <main class="wrap">
-  <form method="post" action="<?= e($ctx->url('/logout')) ?>" class="card inline" style="display:flex;justify-content:space-between;padding:12px 18px">
-    <?= $csrf->field() ?>
-    <span class="muted">Angemeldet als <b><?= e($auth->user()['login']) ?></b></span>
-    <button class="btn sm" type="submit">Abmelden</button>
-  </form>
-
-  <?php foreach ($flashes as $f): ?>
-    <p class="msg <?= e($f['type']) ?>"><?= e($f['message']) ?></p>
-  <?php endforeach; ?>
+  <?= $view->renderPartial('admin/_nav', ['nav' => 'uebersicht', 'flashes' => $flashes]) ?>
 
   <section class="card hero">
     <span class="eyebrow">Stand</span>
@@ -61,83 +52,15 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
     </section>
   </div>
 
-  <div class="grid2">
-    <section class="card">
-      <h2>Abgabefrist</h2>
-      <?php $expired = $deadline['deadline'] !== null && strtotime($deadline['deadline']) <= time(); ?>
-      <p class="muted small">
-        <?php if ($deadline['deadline'] === null): ?>Keine Frist gesetzt – Schüler können jederzeit ändern und abgeben.
-        <?php else: ?>Frist: <b><?= e(date('d.m.Y, H:i', (int) strtotime($deadline['deadline']))) ?> Uhr</b><?= $expired ? ' – <b>abgelaufen</b>' : '' ?>.
-        <?php endif; ?>
-        Abgegebene Wahlen sind immer gesperrt, bis du sie in der Liste freischaltest.</p>
-      <form method="post" action="<?= e($ctx->url('/admin/settings')) ?>">
-        <?= $csrf->field() ?>
-        <label for="deadline">Abgabe bis</label>
-        <input type="datetime-local" id="deadline" name="deadline" value="<?= $deadline['deadline'] ? e(date('Y-m-d\TH:i', (int) strtotime($deadline['deadline']))) : '' ?>">
-        <label for="mode">Nach Ablauf der Frist</label>
-        <select id="mode" name="mode">
-          <?php foreach ($deadlineModes as $k => $label): ?><option value="<?= e($k) ?>" <?= $deadline['mode'] === $k ? 'selected' : '' ?>><?= e($label) ?></option><?php endforeach; ?>
-        </select>
-        <p><button class="btn primary" type="submit">Speichern</button> <span class="muted small">Datum leeren = keine Frist</span></p>
-      </form>
-    </section>
-
-    <section class="card">
-      <h2>Export</h2>
-      <p class="muted small">Formulare: jede Kurswahl-PDF des Schulservers mit den Kreuzen der gespeicherten Wahl, byte-gleich
-        zum Original und unter dem Original-Dateinamen. Ohne gespeicherte Wahl bleibt die PDF unausgefüllt (siehe <code>Hinweise.txt</code> im ZIP).</p>
-      <p>
-        <a class="btn primary" href="<?= e($ctx->url('/admin/export/formulare')) ?>">Alle Formulare (ZIP)</a>
-        <a class="btn" href="<?= e($ctx->url('/admin/export/formulare?nur=abgegeben')) ?>">Nur abgegebene (ZIP)</a>
-      </p>
-      <p class="muted small">Wahlen als Tabelle (Excel): Status, Fehler, Prüfungsfächer und Kurse je Halbjahr.</p>
-      <p><a class="btn" href="<?= e($ctx->url('/admin/export/wahlen')) ?>">Alle Wahlen (CSV)</a></p>
-    </section>
-  </div>
-
-  <section class="card" id="pflicht">
-    <h2>Pflichtkurse</h2>
-    <p class="muted small">Angekreuzte Kurse setzt der Planer bei jedem Schüler des Jahrgangs fest. Ein Kreuz gilt immer für den
-      Halbjahresblock (Q1+Q2 bzw. Q3+Q4). Für Geschichte und Politikwissenschaft darf stattdessen der bilinguale Kurs gewählt
-      werden; regulär und bilingual schließen sich aus. Deutsch und Mathematik in allen vier Halbjahren prüft der Planer
-      unabhängig davon (VO-GO).</p>
-    <nav class="tabs">
-      <?php foreach ($pflicht['jahrgaenge'] as $jg): ?>
-        <a class="tab <?= $pflicht['selected'] === $jg ? 'on' : '' ?>" title="<?= e($jg) ?>" href="<?= e($ctx->url('/admin?jg=' . rawurlencode($jg) . '#pflicht')) ?>"><?= e($jg) ?></a>
-      <?php endforeach; ?>
-      <a class="tab <?= $pflicht['selected'] === '' ? 'on' : '' ?>" href="<?= e($ctx->url('/admin?jg=#pflicht')) ?>">Vorlage für neue Jahrgänge</a>
-    </nav>
-    <p class="muted small">
-      <?php if ($pflicht['selected'] === ''): ?>
-        Die Vorlage wird kopiert, sobald ein Jahrgang zum ersten Mal auftaucht (z. B. beim Import seiner PDFs). Änderungen hier wirken
-        nicht auf bestehende Jahrgänge. Schüler ohne Schul-PDF bekommen die Vorlage.
-      <?php else: ?>
-        Gilt nur für Schüler, deren Schul-PDF den Jahrgang <b><?= e($pflicht['selected']) ?></b> trägt.
-        <?php if (!$pflicht['stored']): ?>
-          <br><b>Noch nicht festgelegt:</b> angezeigt wird die Vorlage. Der Jahrgang folgt ihr, bis du hier speicherst
-          oder seine ersten PDFs importiert werden.
-        <?php endif; ?>
-      <?php endif; ?>
+  <section class="card" id="export">
+    <h2>Export</h2>
+    <p class="muted small">Formulare: jede Kurswahl-PDF des Schulservers mit den Kreuzen der gespeicherten Wahl, byte-gleich
+      zum Original und unter dem Original-Dateinamen. Ohne gespeicherte Wahl bleibt die PDF unausgefüllt (siehe <code>Hinweise.txt</code> im ZIP).</p>
+    <p>
+      <a class="btn primary" href="<?= e($ctx->url('/admin/export/formulare')) ?>">Alle Formulare (ZIP)</a>
+      <a class="btn" href="<?= e($ctx->url('/admin/export/formulare?nur=abgegeben')) ?>">Nur abgegebene (ZIP)</a>
+      <a class="btn" href="<?= e($ctx->url('/admin/export/wahlen')) ?>">Alle Wahlen (CSV)</a>
     </p>
-    <form method="post" action="<?= e($ctx->url('/admin/pflicht')) ?>">
-      <?= $csrf->field() ?>
-      <input type="hidden" name="jg" value="<?= e($pflicht['selected']) ?>">
-      <div class="tablewrap"><table class="pgrid">
-        <tr><th>Fach</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr>
-        <?php foreach (\App\Services\Pflicht::SUBJECTS as $id => [$name, $allowed, $bili]): ?>
-          <tr>
-            <td><?= e($name) ?><?= $bili ? ' <small class="muted">(oder bilingual)</small>' : '' ?></td>
-            <?php for ($q = 1; $q <= 4; $q++): ?>
-              <td><?php if (in_array($q, $allowed, true)): ?>
-                <input type="checkbox" class="pbox" name="pflicht[<?= e($id) ?>][]" value="<?= $q ?>" data-pair="<?= e($id) ?>-<?= $q <= 2 ? 1 : 2 ?>"
-                  aria-label="<?= e($name) ?> Q<?= $q ?>" <?= in_array($q, $pflicht['grid'][$id], true) ? 'checked' : '' ?>>
-              <?php endif; ?></td>
-            <?php endfor; ?>
-          </tr>
-        <?php endforeach; ?>
-      </table></div>
-      <p><button class="btn primary" type="submit"><?= $pflicht['selected'] === '' ? 'Vorlage speichern' : 'Pflichtkurse für ' . e($pflicht['selected']) . ' speichern' ?></button></p>
-    </form>
   </section>
 
   <section class="card">

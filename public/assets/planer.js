@@ -14,7 +14,7 @@ const SUBJECTS = [
   {id:'pwb', name:'Politikwissenschaft bilingual', af:2, pw:true, twin:'pw', note:'für den bilingualen Zug'},
   {id:'geo', name:'Geografie', af:2, lk2:true},
   {id:'phi', name:'Philosophie', af:2},
-  {id:'psy', name:'Psychologie', af:2, roles:[], sems:[1,2], note:'nur Q1 und Q2, kein Prüfungsfach'},
+  {id:'psy', name:'Psychologie', af:2, roles:[], note:'kein Prüfungsfach'},
   {id:'sw', name:'Sozialwissenschaften', af:2, lk2:true, needsWpf:'wpfSw', roles:['lk2'], gk:false, note:'nur als 2. Leistungskurs'},
   {id:'ma', name:'Mathematik', af:3, lk1:true, lk2:true, group:'ma'},
   {id:'ph', name:'Physik', af:3, lk1:true, lk2:true, nw:true},
@@ -34,14 +34,9 @@ const langCat = kl => !kl ? 'none' : kl<=7 ? 'early' : kl<=9 ? 'mid' : 'new';
 const langLabel = id => { const kl=st.langKl&&st.langKl[id]; return kl ? `seit Klasse ${kl}${kl===10?' (neu)':''}` : LANG_OPTS.find(o=>o[0]===st.langs[id])[1]; };
 const langSortKey = id => (st.langKl&&st.langKl[id]) || {early:5,mid:8,new:10,none:99}[st.langs[id]];
 
-const SPORT = {
-  A1:'Leichtathletik', B1:'Basketball', B3:'Fußball', B4:'Handball', B5:'Hockey', B6:'Rugby', B7:'Volleyball',
-  B8:'Badminton', B10:'Tischtennis', B12:'Ultimate Frisbee', C1:'Geräteturnen', D1:'Gymnastik/Tanz',
-  E1:'Schwimmen', G2:'Rudern', H1:'Fitness'
-};
-const SPORT_ODD = ['A1','B3','B4','B12','B7','B8','B10','C1','D1','E1','G2','H1'];
-const SPORT_EVEN = ['A1','B1','B3','B5','B6','B7','B8','B10','D1','E1','G2','H1'];
-const SPORT_BY_SEM = [SPORT_ODD, SPORT_EVEN, SPORT_ODD, SPORT_EVEN];
+// Sportkurse und Halbjahre der Zusatzkurse: Kursangebot des Jahrgangs (assets/kursangebot.js bzw. Server)
+const SPORT = {...KURSANGEBOT_STANDARD.sport.katalog};
+const SPORT_BY_SEM = KURSANGEBOT_STANDARD.sport.sems.map(a=>[...a]);
 
 const ZUSATZ = [
   {id:'z_ks', name:'Kreatives Schreiben', fach:'de', sems:[1,2,3,4], pair:true},
@@ -56,6 +51,7 @@ const ZUSATZ = [
   {id:'z_rt', name:'Relativitätstheorie', fach:'ph', sems:[1,2,3,4], pair:true},
   {id:'z_astro', name:'Astronomie', fach:'ph', sems:[1,2,3,4], pair:true},
 ];
+SUBJECTS.forEach(s=>{ const f=KURSANGEBOT_STANDARD.faecher.find(x=>x.id===s.id); if(f && f.sems.length<4) s.sems=[...f.sems]; });
 const S = Object.fromEntries(SUBJECTS.map(s=>[s.id,s]));
 const Z = Object.fromEntries(ZUSATZ.map(z=>[z.id,z]));
 
@@ -81,12 +77,35 @@ let localProfile = SERVER && BOOT.readOnly ? null : (()=>{ try{ return JSON.pars
 let readOnly = SERVER && !!BOOT.readOnly;
 const localMode = () => !!localProfile;
 
+/* ---- Kursangebot des Jahrgangs ----
+   Nicht angebotene Fächer bleiben in der Liste (die Regeln kennen sie), sind aber gesperrt. */
+const ANGEBOT = SERVER && BOOT.angebot ? BOOT.angebot : {
+  faecher:Object.fromEntries(KURSANGEBOT_STANDARD.faecher.map(f=>[f.id,f.sems])),
+  zusatz:Object.fromEntries(KURSANGEBOT_STANDARD.zusatz.map(z=>[z.id,z.sems])),
+  sport:KURSANGEBOT_STANDARD.sport,
+};
+SUBJECTS.forEach(s=>{
+  if(s.id==='spo') return;
+  const q=(ANGEBOT.faecher||{})[s.id];
+  if(!q || !q.length){ s.notOffered=true; s.sems=[]; }
+  else if(q.length<4) s.sems=[...q]; else delete s.sems;
+});
+for(let i=ZUSATZ.length-1;i>=0;i--){
+  const z=ZUSATZ[i], q=(ANGEBOT.zusatz||{})[z.id];
+  if(!q || !q.length){ ZUSATZ.splice(i,1); delete Z[z.id]; } else z.sems=[...q];
+}
+if(ANGEBOT.sport){
+  Object.keys(SPORT).forEach(k=>delete SPORT[k]); Object.assign(SPORT, ANGEBOT.sport.katalog||{});
+  [0,1,2,3].forEach(i=>{ SPORT_BY_SEM[i]=[...((ANGEBOT.sport.sems||[])[i]||[])]; });
+}
+const semRange = qs => qs.length===2 && qs[1]===qs[0]+1 ? `Q${qs[0]}–Q${qs[1]}` : qs.map(q=>'Q'+q).join(', ');
+
 /* ---- Pflichtkurse der Schule ----
    Vom Admin festgelegt (Fach + Halbjahre); ohne Server Deutsch und Mathematik in allen Halbjahren.
    Ein bilingualer Kurs erfüllt die Pflicht des regulären Fachs. Regulär und bilingual schließen sich aus. */
 const PFLICHT_DEFAULT=[{id:'de',sems:[1,2,3,4]},{id:'ma',sems:[1,2,3,4]}];
 const PFLICHT=(SERVER && Array.isArray(BOOT.pflicht) ? BOOT.pflicht : PFLICHT_DEFAULT)
-  .filter(p=>p && S[p.id] && !S[p.id].twin && Array.isArray(p.sems))
+  .filter(p=>p && S[p.id] && !S[p.id].twin && !S[p.id].notOffered && Array.isArray(p.sems))
   .map(p=>({id:p.id, sems:p.sems.map(Number).filter(q=>(S[p.id].sems||[1,2,3,4]).includes(q))}));
 const partnerOf = id => S[id] && S[id].twin ? S[id].twin : ((SUBJECTS.find(x=>x.twin===id)||{}).id || null);
 const pflichtOf = id => PFLICHT.find(p=>p.id===id || (S[id] && S[id].twin===p.id)) || null;
@@ -208,6 +227,9 @@ function normalize(){
     const allowed = id==='spt' ? [3,4] : (S[id]&&S[id].sems) || [1,2,3,4];
     st.sem[id]=toBlocks(st.sem[id], allowed);
   });
+  // Nicht angebotene Fächer: Kreuze und Rollen entfernen
+  SUBJECTS.filter(s=>s.notOffered).forEach(s=>{ delete st.sem[s.id]; Object.keys(st.roles).forEach(r=>{ if(st.roles[r]===s.id) st.roles[r]=null; }); });
+  st.sport=st.sport.map((c,i)=>c && SPORT_BY_SEM[i].includes(c) ? c : null);
   // Regulär und bilingual zugleich (z. B. aus einer geladenen Datei): das Fach mit Rolle bzw. die bilinguale Variante behalten
   SUBJECTS.filter(s=>s.twin).forEach(s=>{
     if(!semsOf(s.id).some(Boolean) || !semsOf(s.twin).some(Boolean)) return;
@@ -257,6 +279,7 @@ const zweitFsMid = () => {
 };
 
 function allowedRoles(s){
+  if(s.notOffered) return [];
   let base = s.roles ? [...s.roles] : ['pf3','pf4','pk5'];
   if(!s.roles){ if(s.lk1) base.unshift('lk1'); if(s.lk2) base.splice(s.lk1?1:0,0,'lk2'); }
   if(s.lang){ base = ['pf3','pf4','pk5']; if(s.lk2 && st.langs[s.id]!=='new'){ base.unshift('lk2'); if(st.langs[s.id]!=='none') base.unshift('lk1'); } }
@@ -499,7 +522,7 @@ function renderFaecher(){
       <div class="colhead"><span>Fach</span><span>Rolle</span><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span><span>Σ</span></div>`;
     SUBJECTS.filter(s=>s.af===af).forEach(s=>{
       const row=document.createElement('div'); row.className='row';
-      const off=(s.needsWpf&&!st.meta[s.needsWpf])||(s.lang&&st.langs[s.id]==='none')||(s.id==='spo'&&sportOff());
+      const off=s.notOffered||(s.needsWpf&&!st.meta[s.needsWpf])||(s.lang&&st.langs[s.id]==='none')||(s.id==='spo'&&sportOff());
       if(off) row.classList.add('off');
       if(hasRole(s.id)||cnt(s.id)>0) row.classList.add('active');
       const rs=roleOf(s.id);
@@ -509,7 +532,8 @@ function renderFaecher(){
       }).join('');
       const pf=pflichtOf(s.id);
       const pfNote=pf ? (s.twin ? `erfüllt die Pflicht ${S[s.twin].name} in ${semText(pf.sems)}` : `Pflicht in ${semText(pf.sems)}${partnerOf(s.id)?' (oder bilingual)':''}`) : '';
-      const note=[s.note||(s.lang?esc(langLabel(s.id)):''), pfNote].filter(Boolean).map(t=>`<small>${t}</small>`).join('');
+      const offerNote = s.notOffered ? 'wird in deinem Jahrgang nicht angeboten' : (s.sems && s.sems.length<4 && s.id!=='spo' ? `nur ${semRange(s.sems)}` : '');
+      const note=[offerNote, s.notOffered?'':(s.note||(s.lang?esc(langLabel(s.id)):'')), pfNote].filter(Boolean).map(t=>`<small>${t}</small>`).join('');
       let boxes='';
       if(s.id==='spo'){
         const sp=sportOff()?[false,false,false,false]:st.sport.map(Boolean);
@@ -1405,12 +1429,15 @@ function setupAccountBar(){
     const back=document.createElement('a'); back.className='btn'; back.href=BOOT.adminUrl||'admin'; back.textContent='Zurück zur Übersicht';
     bar.append(back);
   } else if(SERVER){
+    const pw=document.createElement('a'); pw.className='btn'; pw.href='passwort'; pw.textContent='Passwort ändern';
+    bar.append(pw);
     const out=document.createElement('form'); out.method='post'; out.action='logout'; out.className='kw-logout';
     const t=document.createElement('input'); t.type='hidden'; t.name='_csrf'; t.value=BOOT.csrf;
     const b=document.createElement('button'); b.type='submit'; b.className='btn'; b.textContent='Abmelden';
     out.onsubmit=e=>{ if((dirty||saving) && !confirm('Deine letzte Änderung ist noch nicht gespeichert. Trotzdem abmelden?')) e.preventDefault(); };
     out.append(t,b); bar.append(out);
   }
+  if(SERVER){ const ds=document.createElement('a'); ds.className='kw-ds'; ds.href='datenschutz'; ds.textContent='Datenschutz'; bar.append(ds); }
   document.querySelector('header.hero .wrap').prepend(bar);
   if(localMode()) setSync('local');
   else if(SERVER && lockText()) setSync('locked', lockText());
@@ -1621,7 +1648,7 @@ function wzCandidates(d){
   return withState(d, ()=>{
     const out=[];
     SUBJECTS.forEach(s=>{
-      if(s.id==='spo' || s.gk===false) return;
+      if(s.id==='spo' || s.gk===false || s.notOffered) return;
       if(partnerOf(s.id) && sems(partnerOf(s.id)).some(Boolean)) return;
       if(s.needsWpf && !st.meta[s.needsWpf]) return;
       if(s.lang && st.langs[s.id]==='none') return;

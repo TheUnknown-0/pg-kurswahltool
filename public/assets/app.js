@@ -31,6 +31,7 @@ document.querySelectorAll('form[data-confirm]').forEach(f => {
 // Pflichtkurse: ein Kreuz gilt für den Halbjahresblock (Q1+Q2 bzw. Q3+Q4)
 document.querySelectorAll('.pbox').forEach(cb => {
   cb.addEventListener('change', () => {
+    if (!cb.dataset.pair) return;
     document.querySelectorAll(`.pbox[data-pair="${cb.dataset.pair}"]`).forEach(o => { o.checked = cb.checked; });
   });
 });

@@ -49,6 +49,7 @@ final class PlanerPage
             'lock' => $lock,
             // Pflichtkurse des Jahrgangs aus der Schul-PDF; ohne PDF die Vorlage
             'pflicht' => (new Pflicht($ctx->db))->forJahrgang($pdf['jahrgang'] ?? null),
+            'angebot' => (new Kursangebot($ctx->db))->forJahrgang($pdf['jahrgang'] ?? null),
             'adminView' => $adminView,
             'readOnly' => $adminView || $lock['locked'],
             'pdfUrl' => $adminView ? "admin/students/{$id}/pdf" : 'api/pdf',
@@ -58,8 +59,8 @@ final class PlanerPage
         $html = (string) file_get_contents(dirname(__DIR__, 2) . '/public/planer.html');
         $json = json_encode($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP);
         $html = str_replace('<meta charset="utf-8">', '<meta charset="utf-8">' . "\n" . '<base href="' . e($ctx->url('/')) . '">', $html);
-        $html = str_replace('<script src="assets/form-template.js">',
-            '<script type="application/json" id="kw-boot">' . $json . "</script>\n" . '<script src="assets/form-template.js">', $html);
+        $html = str_replace('<script src="assets/kursangebot.js">',
+            '<script type="application/json" id="kw-boot">' . $json . "</script>\n" . '<script src="assets/kursangebot.js">', $html);
         header('Cache-Control: no-store');
 
         return $html;

@@ -75,3 +75,23 @@ code{background:var(--blue-tint);border-radius:4px;padding:1px 5px;font-size:.9e
 .pgrid{max-width:620px}
 .pgrid th:not(:first-child),.pgrid td:not(:first-child){text-align:center;width:70px}
 .pbox{width:22px;height:22px;accent-color:var(--blue);cursor:pointer}
+.adminnav{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 16px}
+.adminnav .tabs{margin:0}
+.narrow{max-width:440px}
+textarea.bigtext{width:100%;border:1px solid var(--line-strong);border-radius:7px;padding:12px;font:15px/1.5 system-ui,sans-serif}
+.prose{max-width:760px}
+.prose h3{margin:1.2em 0 .3em;font-size:1.08rem}
+.prose p,.prose ul{margin:.3em 0 .8em}
+.footer{padding:8px 0 0;font-size:.88rem;color:var(--ink-2)}
+.footer a{color:var(--ink-2)}
+.bar{display:block;height:8px;border-radius:4px;background:var(--blue-tint)}
+.bar i{display:block;height:100%;border-radius:4px;background:var(--blue2)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.danger-zone{border:1px solid #e3b4b4}
+.card h3{margin-top:22px}
+.card h3:first-child{margin-top:0}
+.sportgrid{max-width:760px}
+.sportgrid th:nth-child(n+3),.sportgrid td:nth-child(n+3){text-align:center;width:60px}
+.sportgrid input[type=text]{padding:6px 8px}
+.sportgrid td:first-child input{width:80px}
+.sportgrid td:nth-child(2) input{min-width:220px}

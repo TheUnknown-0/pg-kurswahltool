@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\HttpException;
+use App\Services\AdminLog;
 use App\Services\Deadline;
 use App\Services\LoginName;
 use App\Services\LoginThrottle;
@@ -47,6 +48,10 @@ final class AuthController extends Controller
         }
         $throttle->clear($login);
         $this->ctx->auth->login((int) $user['id']);
+
+        if ($user['role'] === 'admin') {
+            AdminLog::add($this->ctx, 'login');
+        }
 
         return $this->redirect($user['role'] === 'admin' ? '/admin' : '/');
     }

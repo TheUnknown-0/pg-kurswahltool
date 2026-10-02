@@ -16,6 +16,7 @@
   <img class="logo" src="https://5pk.pg-hub.de/assets/logo-frei.png" alt="Paulsen-Gymnasium" data-hide-on-error>
 </header>
 <?= $content ?>
+<footer class="wrap footer"><a href="<?= e($ctx->url('/datenschutz')) ?>">Datenschutz</a></footer>
 <script src="<?= e($ctx->url('/assets/app.js')) ?>"></script>
 </body>
 </html>

@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\HttpException;
+use App\Services\AdminLog;
+use App\Services\Datenschutz;
 use App\Services\Deadline;
 use App\Services\LoginName;
 use App\Services\PlanerPage;
 use App\Services\SchoolPdfPatcher;
 use App\Services\PdfImporter;
-use App\Services\Pflicht;
 use App\Services\UserImport;
 
 /**
@@ -58,6 +59,7 @@ final class AdminController extends Controller
         return $this->ctx->view->render('admin/index', [
             'title' => 'Admin',
             'subtitle' => 'Administration',
+            'nav' => 'uebersicht',
             'stats' => $this->stats(),
             'students' => $students,
             'unassigned' => $db->fetchAll(
@@ -66,9 +68,6 @@ final class AdminController extends Controller
             'studentOptions' => $db->fetchAll("SELECT id, login FROM users WHERE role = 'student' ORDER BY login"),
             'log' => $db->fetchAll('SELECT source, filename, status, message, created_at FROM import_log ORDER BY id DESC LIMIT 100'),
             'flashes' => $this->ctx->session->pullFlashes(),
-            'deadline' => (new Deadline($db))->settings(),
-            'deadlineModes' => Deadline::MODES,
-            'pflicht' => $this->pflichtView(),
             'q' => $q,
             'filter' => $filter,
         ]);
@@ -119,6 +118,7 @@ final class AdminController extends Controller
             $queued++;
         }
         if ($queued > 0) {
+            AdminLog::add($this->ctx, 'upload', "{$queued} Datei(en)");
             $this->ctx->session->flash('ok', "{$queued} Datei(en) in der Warteschlange. Der Import läuft im Hintergrund – das Protokoll unten aktualisiert sich.");
         }
         foreach ($errors as $e) {
@@ -140,6 +140,7 @@ final class AdminController extends Controller
         }
         $r = (new UserImport($this->ctx->db))->import((string) file_get_contents((string) $file['tmp_name']));
         $matched = (new PdfImporter($this->ctx->db))->rematch();
+        AdminLog::add($this->ctx, 'konten_import', "{$r['created']} neu, {$r['updated']} aktualisiert, " . count($r['errors']) . ' Fehler');
         $this->ctx->session->flash('ok', "Konten: {$r['created']} neu, {$r['updated']} aktualisiert. {$matched} PDF(s) neu zugeordnet.");
         foreach (array_slice($r['errors'], 0, 30) as $e) {
             $this->ctx->session->flash('error', $e);
@@ -179,6 +180,7 @@ final class AdminController extends Controller
             [$login, password_hash($pw, PASSWORD_DEFAULT), mb_substr($name, 0, 160)],
         );
         $matched = (new PdfImporter($this->ctx->db))->rematch();
+        AdminLog::add($this->ctx, 'konto_neu', $login);
         $this->ctx->session->flash('ok', "Konto {$login} angelegt." . ($matched > 0 ? ' Seine Kurswahl-PDF wurde zugeordnet.' : ' Noch keine passende PDF vorhanden.'));
 
         return $this->redirect('/admin');
@@ -195,6 +197,7 @@ final class AdminController extends Controller
             return $this->redirect('/admin');
         }
         $this->ctx->db->run("UPDATE users SET password_hash = ? WHERE id = ? AND role = 'student'", [password_hash($pw, PASSWORD_DEFAULT), (int) $p['id']]);
+        AdminLog::add($this->ctx, 'passwort', $this->loginOf((int) $p['id']));
         $this->ctx->session->flash('ok', 'Passwort gesetzt.');
 
         return $this->redirect('/admin');
@@ -204,6 +207,7 @@ final class AdminController extends Controller
     {
         $this->ctx->auth->requireAdmin();
         $this->verifyCsrf();
+        AdminLog::add($this->ctx, 'konto_geloescht', $this->loginOf((int) $p['id']));
         $this->ctx->db->run("DELETE FROM users WHERE id = ? AND role = 'student'", [(int) $p['id']]);
         $this->ctx->session->flash('ok', 'Konto gelöscht. Seine PDF ist jetzt ohne Zuordnung, die gespeicherte Wahl ist gelöscht.');
 
@@ -219,6 +223,7 @@ final class AdminController extends Controller
             throw new HttpException(400, 'Konto nicht gefunden.');
         }
         (new PdfImporter($this->ctx->db))->assign((int) $p['id'], $userId > 0 ? $userId : null);
+        AdminLog::add($this->ctx, 'pdf_zugeordnet', 'PDF ' . (int) $p['id'] . ' → ' . ($userId > 0 ? $this->loginOf($userId) : 'ohne Konto'));
         $this->ctx->session->flash('ok', $userId > 0 ? 'PDF zugeordnet.' : 'Zuordnung gelöst.');
 
         return $this->redirect('/admin');
@@ -228,6 +233,8 @@ final class AdminController extends Controller
     {
         $this->ctx->auth->requireAdmin();
         $this->verifyCsrf();
+        $name = (string) $this->ctx->db->fetchValue('SELECT name FROM school_pdfs WHERE id = ?', [(int) $p['id']]);
+        AdminLog::add($this->ctx, 'pdf_geloescht', $name);
         $this->ctx->db->run('DELETE FROM school_pdfs WHERE id = ?', [(int) $p['id']]);
         $this->ctx->session->flash('ok', 'PDF gelöscht.');
 
@@ -259,7 +266,7 @@ final class AdminController extends Controller
             if ($dt === false) {
                 $this->ctx->session->flash('error', 'Ungültiges Datum.');
 
-                return $this->redirect('/admin');
+                return $this->redirect('/admin/einstellungen');
             }
             $deadline = $dt->format('Y-m-d H:i:00');
         }
@@ -267,26 +274,10 @@ final class AdminController extends Controller
             throw new HttpException(400);
         }
         (new Deadline($this->ctx->db))->save($deadline, $mode);
+        AdminLog::add($this->ctx, 'frist', ($deadline ?? 'keine') . ", {$mode}");
         $this->ctx->session->flash('ok', $deadline === null ? 'Abgabefrist entfernt.' : 'Abgabefrist gespeichert: ' . date('d.m.Y H:i', (int) strtotime($deadline)) . ' Uhr.');
 
-        return $this->redirect('/admin');
-    }
-
-    public function savePflicht(): string
-    {
-        $this->ctx->auth->requireAdmin();
-        $this->verifyCsrf();
-        $jg = trim((string) ($_POST['jg'] ?? ''));
-        if ($jg !== '' && !in_array($jg, (new Pflicht($this->ctx->db))->jahrgaenge(), true)) {
-            throw new HttpException(400, 'Unbekannter Jahrgang.');
-        }
-        $marks = is_array($_POST['pflicht'] ?? null) ? $_POST['pflicht'] : [];
-        (new Pflicht($this->ctx->db))->save($jg === '' ? null : $jg, $marks);
-        $this->ctx->session->flash('ok', $jg === ''
-            ? 'Vorlage gespeichert. Sie gilt für Jahrgänge, die ab jetzt neu dazukommen, und für Schüler ohne Schul-PDF.'
-            : "Pflichtkurse für {$jg} gespeichert. Sie gelten ab dem nächsten Öffnen des Planers (abgegebene Wahlen bleiben unverändert).");
-
-        return $this->redirect('/admin?jg=' . rawurlencode($jg) . '#pflicht');
+        return $this->redirect('/admin/einstellungen');
     }
 
     /** Planer mit der Wahl des Schülers, nur lesend. */
@@ -294,7 +285,10 @@ final class AdminController extends Controller
     {
         $this->ctx->auth->requireAdmin();
 
-        return PlanerPage::render($this->ctx, $this->student((int) $p['id']), ['adminView' => true]);
+        $student = $this->student((int) $p['id']);
+        AdminLog::add($this->ctx, 'wahl_angesehen', $student['login']);
+
+        return PlanerPage::render($this->ctx, $student, ['adminView' => true]);
     }
 
     /** Original-PDF des Schülers (Vorlage für den Planer in der Admin-Ansicht). */
@@ -320,6 +314,7 @@ final class AdminController extends Controller
             throw new HttpException(404, 'Für dieses Konto liegt keine Kurswahl-PDF vor.');
         }
         [$bytes] = $this->filledPdf($row);
+        AdminLog::add($this->ctx, 'formular', $row['login']);
         header('Content-Type: application/pdf');
         header('Content-Disposition: attachment; filename="' . str_replace('"', '', (string) $row['filename']) . '"');
 
@@ -331,6 +326,7 @@ final class AdminController extends Controller
         $this->ctx->auth->requireAdmin();
         $this->verifyCsrf();
         $this->ctx->db->run('UPDATE selections SET submitted_at = NULL WHERE user_id = ?', [(int) $p['id']]);
+        AdminLog::add($this->ctx, 'freigeschaltet', $this->loginOf((int) $p['id']));
         $this->ctx->session->flash('ok', 'Wahl wieder freigeschaltet – der Schüler kann sie ändern und erneut abgeben.');
 
         return $this->redirect('/admin');
@@ -373,6 +369,7 @@ final class AdminController extends Controller
             $zip->addFromString('Hinweise.txt', "Hinweise zum Export vom " . date('d.m.Y H:i') . "\r\n\r\n" . implode("\r\n", $notes) . "\r\n");
         }
         $zip->close();
+        AdminLog::add($this->ctx, 'export', 'Formulare (ZIP' . ($nur === 'abgegeben' ? ', nur abgegebene' : '') . '): ' . count($used) . ' PDFs');
         $data = (string) file_get_contents($tmp);
         @unlink($tmp);
         header('Content-Type: application/zip');
@@ -413,6 +410,7 @@ final class AdminController extends Controller
             ], ';', '"', '');
         }
         rewind($out);
+        AdminLog::add($this->ctx, 'export', 'Wahlen (CSV): ' . count($rows) . ' Konten');
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="Kurswahlen_' . date('Y-m-d_Hi') . '.csv"');
 
@@ -428,6 +426,47 @@ final class AdminController extends Controller
         }
 
         return $u;
+    }
+
+    /** Einstellungen: Abgabefrist und Datenschutzhinweis */
+    public function settings(): string
+    {
+        $this->ctx->auth->requireAdmin();
+
+        return $this->ctx->view->render('admin/einstellungen', [
+            'title' => 'Einstellungen', 'subtitle' => 'Administration', 'nav' => 'einstellungen',
+            'flashes' => $this->ctx->session->pullFlashes(),
+            'deadline' => (new Deadline($this->ctx->db))->settings(),
+            'deadlineModes' => Deadline::MODES,
+            'datenschutz' => Datenschutz::text($this->ctx->db),
+        ]);
+    }
+
+    public function saveDatenschutz(): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $this->verifyCsrf();
+        Datenschutz::save($this->ctx->db, (string) ($_POST['text'] ?? ''));
+        AdminLog::add($this->ctx, 'datenschutz');
+        $this->ctx->session->flash('ok', 'Datenschutzhinweis gespeichert.');
+
+        return $this->redirect('/admin/einstellungen');
+    }
+
+    /** Protokoll der Admin-Aktionen */
+    public function log(): string
+    {
+        $this->ctx->auth->requireAdmin();
+
+        return $this->ctx->view->render('admin/protokoll', [
+            'title' => 'Protokoll', 'subtitle' => 'Administration', 'nav' => 'protokoll',
+            'rows' => $this->ctx->db->fetchAll('SELECT admin_login, action, details, ip_address, created_at FROM admin_log ORDER BY id DESC LIMIT 500'),
+        ]);
+    }
+
+    private function loginOf(int $id): string
+    {
+        return (string) ($this->ctx->db->fetchValue('SELECT login FROM users WHERE id = ?', [$id]) ?? "#{$id}");
     }
 
     /** @return list<array<string, mixed>> */
@@ -458,25 +497,6 @@ final class AdminController extends Controller
         $keys = is_array($sum['fieldKeys'] ?? null) ? array_values(array_map('strval', $sum['fieldKeys'])) : null;
 
         return [SchoolPdfPatcher::patch((string) $r['pdf'], array_values(array_map('strval', $sum['checks'])), $pk, $keys), null];
-    }
-
-    /** @return array{jahrgaenge: list<string>, selected: string, grid: array<string, list<int>>, stored: bool} */
-    private function pflichtView(): array
-    {
-        $svc = new Pflicht($this->ctx->db);
-        $jahrgaenge = $svc->jahrgaenge();
-        $selected = (string) ($_GET['jg'] ?? ($jahrgaenge[0] ?? ''));
-        if ($selected !== '' && !in_array($selected, $jahrgaenge, true)) {
-            $selected = '';
-        }
-
-        return [
-            'jahrgaenge' => $jahrgaenge,
-            'selected' => $selected,
-            // Anzeigen legt nichts fest: ein neuer Jahrgang folgt der Vorlage, bis er gespeichert oder importiert wird
-            'grid' => Pflicht::grid($selected === '' ? $svc->preset() : $svc->peek($selected)),
-            'stored' => $selected === '' || $svc->isStored($selected),
-        ];
     }
 
     /** @return array<string, mixed> */

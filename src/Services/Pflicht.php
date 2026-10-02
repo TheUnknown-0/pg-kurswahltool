@@ -4,21 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Database;
-
 /**
  * Pflichtkurse der Schule je Abiturjahrgang: Fach und Halbjahre, die jeder Schüler belegen muss.
- *
- * Es gibt eine Vorlage für neue Jahrgänge. Taucht ein Jahrgang zum ersten Mal auf (Import seiner PDFs,
- * Admin-Bereich, Planer), bekommt er eine Kopie der Vorlage. Spätere Änderungen an der Vorlage wirken
- * deshalb nicht rückwirkend auf bestehende Jahrgänge. Schüler ohne Schul-PDF (also ohne Jahrgang)
- * erhalten die Vorlage.
+ * Vorlage und Kopie je Jahrgang siehe JahrgangSetting.
  *
  * Fächer und erlaubte Halbjahre entsprechen SUBJECTS in public/assets/planer.js. Bilinguale Kurse
  * stehen hier nicht: Sie erfüllen im Planer automatisch die Pflicht des regulären Fachs. Fremdsprachen
  * und Fächer mit Wahlpflicht-Voraussetzung fehlen bewusst – sie hängen vom Schüler ab.
  */
-final class Pflicht
+final class Pflicht extends JahrgangSetting
 {
     /** id => [Name, erlaubte Halbjahre, bilinguale Variante vorhanden] */
     public const SUBJECTS = [
@@ -29,7 +23,7 @@ final class Pflicht
         'pw' => ['Politikwissenschaft', [1, 2, 3, 4], true],
         'geo' => ['Geografie', [1, 2, 3, 4], false],
         'phi' => ['Philosophie', [1, 2, 3, 4], false],
-        'psy' => ['Psychologie', [1, 2], false],
+        'psy' => ['Psychologie', [1, 2, 3, 4], false],
         'ma' => ['Mathematik', [1, 2, 3, 4], false],
         'ph' => ['Physik', [1, 2, 3, 4], false],
         'ch' => ['Chemie', [1, 2, 3, 4], false],
@@ -37,107 +31,46 @@ final class Pflicht
     ];
 
     private const DEFAULT = [['id' => 'de', 'sems' => [1, 2, 3, 4]], ['id' => 'ma', 'sems' => [1, 2, 3, 4]]];
-    private const PRESET = 'pflicht_vorlage';
-    private const PREFIX = 'pflicht_jg:';
 
-    public function __construct(private readonly Database $db)
+    protected function name(): string
     {
+        return 'pflicht';
+    }
+
+    protected function standard(): array
+    {
+        return self::DEFAULT;
+    }
+
+    /** Einstellung aus der Zeit vor den Jahrgängen wird zur Vorlage */
+    protected function legacyPreset(): ?string
+    {
+        return $this->get('pflicht');
     }
 
     /** @return list<array{id: string, sems: list<int>}> */
-    public function preset(): array
+    protected function clean(mixed $list): array
     {
-        // 'pflicht' = Einstellung aus der Zeit vor den Jahrgängen, wird zur Vorlage
-        $raw = $this->get(self::PRESET) ?? $this->get('pflicht');
-
-        return $raw === null ? self::DEFAULT : self::clean(json_decode($raw, true));
-    }
-
-    /**
-     * Pflichtkurse eines Jahrgangs; beim ersten Zugriff wird die Vorlage kopiert.
-     *
-     * @return list<array{id: string, sems: list<int>}>
-     */
-    public function forJahrgang(?string $jahrgang): array
-    {
-        $jahrgang = trim((string) $jahrgang);
-        if ($jahrgang === '') {
-            return $this->preset();
+        if (!is_array($list)) {
+            return self::DEFAULT;
         }
-        $raw = $this->get(self::PREFIX . $jahrgang);
-        if ($raw !== null) {
-            return self::clean(json_decode($raw, true));
-        }
-        $list = $this->preset();
-        $this->set(self::PREFIX . $jahrgang, $list);
-
-        return $list;
-    }
-
-    /** Wie viele Abiturjahrgänge ab dem aktuellen im Voraus einstellbar sind. */
-    public const YEARS_AHEAD = 3;
-
-    /**
-     * Aktueller Abiturjahrgang und die folgenden (Schuljahreswechsel im August),
-     * z. B. im Herbst 2026: Abitur 2026/27, 2027/28, 2028/29.
-     *
-     * @return list<string>
-     */
-    public static function upcoming(?\DateTimeInterface $now = null): array
-    {
-        $now ??= new \DateTimeImmutable();
-        $y = (int) $now->format('Y') - ((int) $now->format('n') >= 8 ? 0 : 1);
         $out = [];
-        for ($i = 0; $i < self::YEARS_AHEAD; $i++) {
-            $out[] = sprintf('Abitur %d/%02d', $y + $i, ($y + $i + 1) % 100);
+        foreach ($list as $p) {
+            if (is_array($p) && isset(self::SUBJECTS[$p['id'] ?? '']) && is_array($p['sems'] ?? null)) {
+                $sems = array_values(array_intersect([1, 2, 3, 4], array_map('intval', $p['sems'])));
+                if ($sems !== []) {
+                    $out[] = ['id' => (string) $p['id'], 'sems' => $sems];
+                }
+            }
         }
 
         return $out;
     }
 
-    /** Ist für diesen Jahrgang schon etwas festgelegt (gespeichert oder aus der Vorlage kopiert)? */
-    public function isStored(string $jahrgang): bool
-    {
-        return $this->get(self::PREFIX . $jahrgang) !== null;
-    }
-
-    /** Pflichtkurse zur Anzeige, ohne einen noch nicht festgelegten Jahrgang festzuschreiben. */
-    public function peek(string $jahrgang): array
-    {
-        $raw = $this->get(self::PREFIX . $jahrgang);
-
-        return $raw === null ? $this->preset() : self::clean(json_decode($raw, true));
-    }
-
-    /**
-     * Einstellbare Jahrgänge: der aktuelle, die folgenden und alle späteren, für die es schon PDFs oder
-     * Einstellungen gibt (aufsteigend), danach ältere Jahrgänge (neueste zuerst).
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     public function jahrgaenge(): array
     {
-        $upcoming = self::upcoming();
-        $all = array_values(array_unique(array_merge($upcoming, $this->known())));
-        $current = $upcoming[0];
-        $later = array_values(array_filter($all, static fn (string $j): bool => strnatcmp($j, $current) >= 0));
-        $older = array_values(array_filter($all, static fn (string $j): bool => strnatcmp($j, $current) < 0));
-        sort($later, SORT_NATURAL);
-        rsort($older, SORT_NATURAL);
-
-        return array_merge($later, $older);
-    }
-
-    /** @return list<string> Jahrgänge aus Schul-PDFs und Einstellungen */
-    private function known(): array
-    {
-        $fromPdfs = $this->db->fetchAll("SELECT DISTINCT jahrgang FROM school_pdfs WHERE jahrgang <> ''");
-        $fromSettings = $this->db->fetchAll('SELECT name FROM settings WHERE name LIKE ?', [self::PREFIX . '%']);
-        $all = array_merge(
-            array_column($fromPdfs, 'jahrgang'),
-            array_map(static fn (array $r): string => substr($r['name'], strlen(self::PREFIX)), $fromSettings),
-        );
-        return array_values(array_unique($all));
+        return Jahrgaenge::all($this->db);
     }
 
     /**
@@ -151,18 +84,26 @@ final class Pflicht
     {
         $list = [];
         foreach (self::SUBJECTS as $id => [, $allowed]) {
-            $q = array_map('intval', is_array($marks[$id] ?? null) ? $marks[$id] : []);
-            $sems = [];
-            foreach ([[1, 2], [3, 4]] as $block) {
-                if (array_intersect($block, $q) !== [] && array_diff($block, $allowed) === []) {
-                    array_push($sems, ...$block);
-                }
-            }
+            $sems = self::blocks(is_array($marks[$id] ?? null) ? $marks[$id] : [], $allowed);
             if ($sems !== []) {
                 $list[] = ['id' => $id, 'sems' => $sems];
             }
         }
-        $this->set($jahrgang === null ? self::PRESET : self::PREFIX . $jahrgang, $list);
+        $this->store($jahrgang, $list);
+    }
+
+    /** Angekreuzte Halbjahre → ganze Blöcke (Q1+Q2, Q3+Q4) innerhalb der erlaubten Halbjahre */
+    public static function blocks(array $marked, array $allowed = [1, 2, 3, 4]): array
+    {
+        $q = array_map('intval', $marked);
+        $sems = [];
+        foreach ([[1, 2], [3, 4]] as $block) {
+            if (array_intersect($block, $q) !== [] && array_diff($block, $allowed) === []) {
+                array_push($sems, ...$block);
+            }
+        }
+
+        return $sems;
     }
 
     /** @return array<string, list<int>> id => Halbjahre, für das Raster */
@@ -174,37 +115,5 @@ final class Pflicht
         }
 
         return $out;
-    }
-
-    /** @return list<array{id: string, sems: list<int>}> */
-    private static function clean(mixed $list): array
-    {
-        if (!is_array($list)) {
-            return self::DEFAULT;
-        }
-        $out = [];
-        foreach ($list as $p) {
-            if (is_array($p) && isset(self::SUBJECTS[$p['id'] ?? '']) && is_array($p['sems'] ?? null)) {
-                $out[] = ['id' => (string) $p['id'], 'sems' => array_values(array_map('intval', $p['sems']))];
-            }
-        }
-
-        return $out;
-    }
-
-    private function get(string $name): ?string
-    {
-        $v = $this->db->fetchValue('SELECT value FROM settings WHERE name = ?', [$name]);
-
-        return $v === null ? null : (string) $v;
-    }
-
-    /** @param list<array{id: string, sems: list<int>}> $list */
-    private function set(string $name, array $list): void
-    {
-        $this->db->run(
-            'INSERT INTO settings (name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            [$name, json_encode($list)],
-        );
     }
 }
