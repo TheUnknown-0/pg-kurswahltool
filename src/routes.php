@@ -49,6 +49,7 @@ return static function (Router $r): void {
     $r->get('/admin/students/{id}', [AdminController::class, 'viewStudent']);
     $r->get('/admin/students/{id}/pdf', [AdminController::class, 'studentPdf']);
     $r->get('/admin/students/{id}/form', [AdminController::class, 'studentForm']);
+    $r->get('/admin/students/{id}/csv', [AdminController::class, 'studentCsv']);
     $r->post('/admin/students/{id}/unlock', [AdminController::class, 'unlock']);
     $r->get('/admin/export/formulare', [AdminController::class, 'exportForms']);
     $r->get('/admin/export/wahlen', [AdminController::class, 'exportCsv']);

@@ -248,7 +248,7 @@ final class AdminController extends Controller
             throw new HttpException(404);
         }
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="' . str_replace('"', '', (string) $row['filename']) . '"');
+        header('Content-Disposition: ' . self::attachment((string) $row['filename']));
 
         return (string) $row['pdf'];
     }
@@ -312,12 +312,31 @@ final class AdminController extends Controller
         if ($row === null || $row['pdf'] === null) {
             throw new HttpException(404, 'Für dieses Konto liegt keine Kurswahl-PDF vor.');
         }
-        [$bytes] = $this->filledPdf($row);
+        try {
+            [$bytes] = $this->filledPdf($row);
+        } catch (\Throwable $e) {
+            error_log(sprintf('[Kurswahl] Formular %s: %s', $row['login'], $e->getMessage()));
+            throw new HttpException(422, "Das Formular von {$row['login']} konnte nicht erstellt werden: {$e->getMessage()}");
+        }
         AdminLog::add($this->ctx, 'formular', $row['login']);
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="' . str_replace('"', '', (string) $row['filename']) . '"');
+        header('Cache-Control: private, no-store');
+        header('Content-Disposition: ' . self::attachment((string) $row['filename']));
 
         return $bytes;
+    }
+
+    /** Wahl eines einzelnen Schülers als CSV (gleiche Spalten wie der Gesamt-Export). */
+    public function studentCsv(array $p): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $student = $this->student((int) $p['id']);
+        $csv = $this->choicesCsv('u.id = ?', [(int) $student['id']]);
+        AdminLog::add($this->ctx, 'export', 'Wahl (CSV): ' . $student['login']);
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: ' . self::attachment('Kurswahl_' . $student['login'] . '_' . date('Y-m-d_Hi') . '.csv'));
+
+        return $csv;
     }
 
     public function unlock(array $p): string
@@ -381,39 +400,61 @@ final class AdminController extends Controller
     public function exportCsv(): string
     {
         $this->ctx->auth->requireAdmin();
+        $count = 0;
+        $csv = $this->choicesCsv('1 = 1', [], $count);
+        AdminLog::add($this->ctx, 'export', 'Wahlen (CSV): ' . $count . ' Konten');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="Kurswahlen_' . date('Y-m-d_Hi') . '.csv"');
+
+        return $csv;
+    }
+
+    /** CSV der Wahlen für die Schülerkonten, auf die $where passt. */
+    private function choicesCsv(string $where, array $params, int &$count = 0): string
+    {
         $rows = $this->ctx->db->fetchAll(
             "SELECT u.login, u.display_name, p.name, p.klasse, p.schueler_id, s.updated_at, s.submitted_at, s.summary
              FROM users u
              LEFT JOIN school_pdfs p ON p.user_id = u.id AND p.active = 1
              LEFT JOIN selections s ON s.user_id = u.id
-             WHERE u.role = 'student' ORDER BY p.klasse, u.login",
+             WHERE u.role = 'student' AND {$where} ORDER BY p.klasse, u.login",
+            $params,
         );
+        $count = count($rows);
         $out = fopen('php://temp', 'w+');
         fwrite($out, "\xEF\xBB\xBF");
         $cols = ['Login', 'Name', 'Klasse', 'Schüler-ID', 'Status', 'Abgegeben am', 'Gespeichert am', 'Offene Fehler', 'Hinweise',
             '1. LK', '2. LK', '3. PF', '4. PF', '5. PK', 'Form 5. PK', 'Kurse', 'Jahreswochenstunden', 'Q1', 'Q2', 'Q3', 'Q4'];
         fputcsv($out, $cols, ';', '"', '');
         $d = static fn (?string $v): string => $v ? date('d.m.Y H:i', (int) strtotime($v)) : '';
+        $list = static fn (mixed $v): string => is_array($v) ? implode(', ', array_map('strval', $v)) : '';
         foreach ($rows as $r) {
-            $sum = $r['summary'] ? (json_decode((string) $r['summary'], true) ?: []) : [];
-            $roles = $sum['roles'] ?? [];
-            $q = $sum['sems'] ?? [];
-            fputcsv($out, [
+            $sum = $r['summary'] ? json_decode((string) $r['summary'], true) : null;
+            $sum = is_array($sum) ? $sum : [];
+            $roles = is_array($sum['roles'] ?? null) ? $sum['roles'] : [];
+            $q = is_array($sum['sems'] ?? null) ? $sum['sems'] : [];
+            fputcsv($out, array_map(static fn (mixed $v): string => is_scalar($v) ? (string) $v : '', [
                 $r['login'], $r['name'] ?? $r['display_name'], $r['klasse'] ?? '', $r['schueler_id'] ?? '',
                 $r['submitted_at'] ? 'abgegeben' : ($r['updated_at'] ? 'gespeichert' : 'keine Wahl'),
                 $d($r['submitted_at']), $d($r['updated_at']),
                 $sum['errors'] ?? '', $sum['warnings'] ?? '',
                 $roles['lk1'] ?? '', $roles['lk2'] ?? '', $roles['pf3'] ?? '', $roles['pf4'] ?? '', $roles['pk5'] ?? '',
                 $sum['pkForm'] ?? '', $sum['total'] ?? '', $sum['hours'] ?? '',
-                implode(', ', $q[0] ?? []), implode(', ', $q[1] ?? []), implode(', ', $q[2] ?? []), implode(', ', $q[3] ?? []),
-            ], ';', '"', '');
+                $list($q[0] ?? null), $list($q[1] ?? null), $list($q[2] ?? null), $list($q[3] ?? null),
+            ]), ';', '"', '');
         }
         rewind($out);
-        AdminLog::add($this->ctx, 'export', 'Wahlen (CSV): ' . count($rows) . ' Konten');
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="Kurswahlen_' . date('Y-m-d_Hi') . '.csv"');
 
         return (string) stream_get_contents($out);
+    }
+
+    /** Content-Disposition mit ASCII-Ersatz und UTF-8-Dateiname (RFC 6266) */
+    private static function attachment(string $filename): string
+    {
+        $filename = str_replace(['"', "\r", "\n", '\\', '/'], '', $filename);
+        $ascii = (string) preg_replace('/[^\x20-\x7E]/', '_', $filename);
+
+        return 'attachment; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode($filename);
     }
 
     /** @return array<string, mixed> */
@@ -480,10 +521,14 @@ final class AdminController extends Controller
             return [(string) $r['pdf'], $r['state'] ? 'Wahl noch ohne Kurzfassung (Schüler muss den Planer einmal öffnen) – PDF unausgefüllt.' : 'keine Wahl gespeichert – PDF unausgefüllt.'];
         }
         $pk = ($sum['pkField'] ?? '') === 'BLL_0' ? 'BLL_0' : 'Praesentation_0';
+        $checks = array_values(array_map('strval', array_filter($sum['checks'], 'is_scalar')));
+        $keys = is_array($sum['fieldKeys'] ?? null) ? array_values(array_map('strval', array_filter($sum['fieldKeys'], 'is_scalar'))) : null;
+        // Schlüssel gehören nur dann eindeutig zu den Feldnamen, wenn beide Listen gleich lang sind
+        if ($keys !== null && count($keys) !== count($checks)) {
+            $keys = null;
+        }
 
-        $keys = is_array($sum['fieldKeys'] ?? null) ? array_values(array_map('strval', $sum['fieldKeys'])) : null;
-
-        return [SchoolPdfPatcher::patch((string) $r['pdf'], array_values(array_map('strval', $sum['checks'])), $pk, $keys), null];
+        return [SchoolPdfPatcher::patch((string) $r['pdf'], $checks, $pk, $keys), null];
     }
 
     /** @return array<string, mixed> */

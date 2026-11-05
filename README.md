@@ -21,7 +21,7 @@ Form der 5. PK setzt. Alles andere bleibt Byte für Byte unverändert.
 | **Admin** | löscht nach dem Abitur einen ganzen Jahrgang (Konten, Wahlen, PDFs, Einstellungen). Alle Admin-Aktionen stehen im Protokoll. |
 | **Alle** | können ihr Passwort selbst ändern (mindestens 8 Zeichen). |
 | **Admin** | stellt eine Abgabefrist ein und wählt, was danach gilt: nur noch ansehen, Anmeldung gesperrt oder nur Hinweis. |
-| **Admin** | sieht in der Schülerliste, wer gespeichert bzw. abgegeben hat und wie viele Fehler die Wahl noch hat, öffnet die Wahl eines Schülers im Planer (nur lesen) und lädt sein ausgefülltes Formular herunter. |
+| **Admin** | sieht in der Schülerliste, wer gespeichert bzw. abgegeben hat und wie viele Fehler die Wahl noch hat, öffnet die Wahl eines Schülers im Planer (nur lesen) und exportiert direkt aus der Liste je Schüler das ausgefüllte Formular (PDF) oder seine Wahl (CSV). |
 | **Admin** | exportiert alle Formulare als ZIP (jede Original-PDF mit den Kreuzen der gespeicherten Wahl, byte-gleich und unter dem Original-Dateinamen; wahlweise nur abgegebene) und alle Wahlen als CSV für Excel. |
 
 Liegt für ein Konto keine PDF vor, erzeugt der Planer das Formular selbst aus der eingebetteten Vorlage

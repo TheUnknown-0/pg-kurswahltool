@@ -15,8 +15,8 @@ final class SchoolPdfPatcher
     /**
      * @param list<string> $checks Feldnamen der anzukreuzenden Kästchen
      * @param string $pk 'Praesentation_0' oder 'BLL_0'
-     * @param list<string>|null $keys statt $checks: Feldschlüssel „Fach|Kursart|Rang|Spalte“ (unabhängig von
-     *                                den Kurs-Nummern des Jahrgangs, siehe fieldKeys() in planer.js)
+     * @param list<string>|null $keys Feldschlüssel „Fach|Kursart|Rang|Spalte“ zu $checks (gleiche Reihenfolge;
+     *                                unabhängig von den Kurs-Nummern des Jahrgangs, siehe fieldKeys() in planer.js)
      * @throws \RuntimeException wenn die PDF nicht den erwarteten Aufbau hat oder Felder fehlen
      */
     public static function patch(string $pdf, array $checks, string $pk, ?array $keys = null): string
@@ -72,10 +72,13 @@ final class SchoolPdfPatcher
             }
         }
         if ($keys !== null) {
+            // Wie translateChecks() in planer.js: Feld mit gleichem Schlüssel, sonst der Feldname selbst
             $byKey = array_flip(self::fieldKeys(array_values($boxes)));
-            $checks = [];
-            foreach ($keys as $k) {
-                $checks[] = $byKey[$k] ?? $k;
+            foreach ($checks as $i => $name) {
+                $k = $keys[$i] ?? null;
+                if ($k !== null && isset($byKey[$k])) {
+                    $checks[$i] = $byKey[$k];
+                }
             }
         }
 
