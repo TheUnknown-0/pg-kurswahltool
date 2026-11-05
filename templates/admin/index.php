@@ -55,7 +55,8 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
   <section class="card" id="export">
     <h2>Export</h2>
     <p class="muted small">Formulare: jede Kurswahl-PDF des Schulservers mit den Kreuzen der gespeicherten Wahl, byte-gleich
-      zum Original und unter dem Original-Dateinamen. Ohne gespeicherte Wahl bleibt die PDF unausgefüllt (siehe <code>Hinweise.txt</code> im ZIP).</p>
+      zum Original und unter dem Original-Dateinamen. Ohne gespeicherte Wahl bleibt die PDF unausgefüllt (siehe <code>Hinweise.txt</code> im ZIP).
+      Einzelne Schüler exportierst du unten in der Schülerliste (Spalte „Export“).</p>
     <p>
       <a class="btn primary" href="<?= e($ctx->url('/admin/export/formulare')) ?>">Alle Formulare (ZIP)</a>
       <a class="btn" href="<?= e($ctx->url('/admin/export/formulare?nur=abgegeben')) ?>">Nur abgegebene (ZIP)</a>
@@ -123,7 +124,7 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
       <button class="btn sm" type="submit">Filtern</button>
     </form>
     <div class="tablewrap"><table>
-      <tr><th>Login</th><th>Name (PDF)</th><th>Klasse</th><th>Schul-PDF</th><th>Wahl</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr>
+      <tr><th>Login</th><th>Name (PDF)</th><th>Klasse</th><th>Schul-PDF</th><th>Wahl</th><th>Export</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr>
       <?php foreach ($students as $s): ?>
       <tr>
         <td><code><?= e($s['login']) ?></code></td>
@@ -141,14 +142,17 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
           <?php else: ?><span class="muted">keine</span><?php endif; ?>
           <?php if ($s['errors'] !== null && (int) $s['errors'] > 0): ?><br><span class="tag fehler"><?= (int) $s['errors'] ?> Fehler</span>
           <?php elseif ($s['errors'] !== null): ?><br><span class="tag importiert">zulässig</span><?php endif; ?>
-          <?php if ($s['saved_at']): ?><br><a href="<?= e($ctx->url('/admin/students/' . $s['id'])) ?>">ansehen</a>
-            <?php if ($s['pdf_id']): ?> · <a href="<?= e($ctx->url('/admin/students/' . $s['id'] . '/form')) ?>">Formular</a><?php endif; ?>
-          <?php endif; ?>
+          <?php if ($s['saved_at']): ?><br><a href="<?= e($ctx->url('/admin/students/' . $s['id'])) ?>">ansehen</a><?php endif; ?>
           <?php if ($s['submitted_at']): ?>
             <form method="post" action="<?= e($ctx->url('/admin/students/' . $s['id'] . '/unlock')) ?>" class="inline" data-confirm="Wahl von <?= e($s['login']) ?> wieder freischalten?">
               <?= $csrf->field() ?><button class="btn sm" type="submit">freischalten</button>
             </form>
           <?php endif; ?>
+        </td>
+        <td class="nowrap">
+          <?php if ($s['pdf_id']): ?><a class="btn sm" href="<?= e($ctx->url('/admin/students/' . $s['id'] . '/form')) ?>"
+            title="<?= $s['saved_at'] ? 'Kurswahl-PDF mit den Kreuzen der gespeicherten Wahl' : 'Noch keine Wahl gespeichert – PDF unausgefüllt' ?>">Formular (PDF)</a><?php endif; ?>
+          <a class="btn sm" href="<?= e($ctx->url('/admin/students/' . $s['id'] . '/csv')) ?>" title="Wahl dieses Schülers als CSV für Excel">Wahl (CSV)</a>
         </td>
         <td><?= e($fmt($s['last_login_at'])) ?></td>
         <td>
@@ -163,7 +167,7 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
         </td>
       </tr>
       <?php endforeach; ?>
-      <?php if (!$students): ?><tr><td colspan="7" class="muted">Keine Konten gefunden.</td></tr><?php endif; ?>
+      <?php if (!$students): ?><tr><td colspan="8" class="muted">Keine Konten gefunden.</td></tr><?php endif; ?>
     </table></div>
     <?php if (count($students) === 500): ?><p class="muted small">Es werden höchstens 500 Konten angezeigt – nutze die Suche.</p><?php endif; ?>
   </section>
