@@ -72,8 +72,35 @@ auf dem Host unter `IMPORT_PATH` (Standard `./import`). Eingelesene Dateien wand
 | `IMPORT_INTERVAL` | `15` | Sekunden zwischen zwei Durchläufen des Workers |
 | `SECURE_COOKIES` | Auto | `1` hinter einem HTTPS-Reverse-Proxy |
 | `TRUSTED_PROXIES` | *(leer)* | Adressen des eigenen Reverse-Proxys für X-Forwarded-For |
+| `UPDATE_CHECK` | `1` | `0` schaltet die Update-Prüfung ab |
+| `UPDATE_URL` | `https://raw.githubusercontent.com/TheUnknown-0/pg-kurswahltool/main` | Hier liegen `VERSION` und `CHANGELOG.md` des neuesten Stands |
 
 `/healthz` antwortet, solange die Anwendung läuft; `/readyz` prüft zusätzlich die Datenbank.
+
+## Versionen und Updates
+
+Die installierte Version steht in `VERSION`, die Änderungen in `CHANGELOG.md`. Die Nummer ist auf jeder
+Seite unter dem Titel zu sehen; Admins öffnen per Klick darauf den Changelog und können dort
+„Nach neuen Versionen suchen“.
+
+Geprüft wird automatisch bei jeder Admin-Anmeldung und einmal täglich durch den Worker: Der Server liest
+`VERSION` (und bei einer neueren Nummer `CHANGELOG.md`) aus dem Branch `main` auf GitHub. Ist dort eine
+höhere Nummer, zeigt der Admin-Bereich auf jeder Seite einen Hinweis mit den Neuerungen. Läuft der Server
+hinter einem Proxy, wird `HTTPS_PROXY` beachtet.
+
+Damit GitHub die Abfragen nicht begrenzt: Die Dateien kommen von `raw.githubusercontent.com` (nicht über die
+GitHub-API mit ihrem Limit von 60 Anfragen pro Stunde). Bei der Anmeldung und per Knopf wird höchstens
+einmal pro Minute gefragt. `VERSION` wird mit ETag abgefragt, `CHANGELOG.md` nur geladen,
+wenn eine neue höhere Version auftaucht. Antwortet GitHub mit 429 bzw. 403 (Rate Limit), ruht die Prüfung
+bis `Retry-After`, sonst eine Stunde. Aktualisiert wird von Hand:
+
+```bash
+git pull && docker compose up -d --build
+```
+
+**Bei jeder Änderung auf `main` die Nummer in `VERSION` erhöhen** (Fehlerbehebung 1.0.1, neue Funktion
+1.1.0) und oben in `CHANGELOG.md` einen Eintrag `## 1.1.0 – JJJJ-MM-TT` mit Stichpunkten ergänzen –
+sonst merken die laufenden Installationen nichts vom Update.
 
 ## Backup
 

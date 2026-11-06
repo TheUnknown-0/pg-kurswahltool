@@ -12,6 +12,7 @@ use App\Services\PlanerPage;
 use App\Services\SchoolPdfPatcher;
 use App\Services\SevenZip;
 use App\Services\PdfImporter;
+use App\Services\UpdateCheck;
 use App\Services\UserImport;
 
 /**
@@ -497,6 +498,27 @@ final class AdminController extends Controller
             'title' => 'Protokoll', 'subtitle' => 'Administration', 'nav' => 'protokoll',
             'rows' => $this->ctx->db->fetchAll('SELECT admin_login, action, details, ip_address, created_at FROM admin_log ORDER BY id DESC LIMIT 500'),
         ]);
+    }
+
+    /** Update-Prüfung von Hand (Knopf im Changelog) */
+    public function updateCheck(): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $this->verifyCsrf();
+        $u = (new UpdateCheck($this->ctx->db, $this->ctx->config['update']))->run(UpdateCheck::MANUAL_MIN_AGE);
+        if ($u['skipped'] === 'kuerzlich') {
+            $this->ctx->session->flash('ok', 'Gerade eben erst geprüft – bitte in einer Minute erneut versuchen.');
+        } elseif ($u['skipped'] === 'gesperrt') {
+            $this->ctx->session->flash('error', 'GitHub begrenzt gerade die Abfragen. Nächster Versuch ab ' . date('d.m.Y H:i', $u['blocked_until']) . '.');
+        } elseif (!$u['enabled']) {
+            $this->ctx->session->flash('error', 'Die Update-Prüfung ist abgeschaltet (UPDATE_CHECK=0).');
+        } elseif (!$u['ok']) {
+            $this->ctx->session->flash('error', 'Update-Prüfung fehlgeschlagen: ' . $u['error']);
+        } elseif (!$u['available']) {
+            $this->ctx->session->flash('ok', "Version {$u['current']} ist aktuell.");
+        }
+
+        return $this->redirect('/admin#changelog');
     }
 
     private function loginOf(int $id): string

@@ -61,6 +61,13 @@ final class PlanerPage
         $html = str_replace('<meta charset="utf-8">', '<meta charset="utf-8">' . "\n" . '<base href="' . e($ctx->url('/')) . '">', $html);
         $html = str_replace('<script src="assets/kursangebot.js">',
             '<script type="application/json" id="kw-boot">' . $json . "</script>\n" . '<script src="assets/kursangebot.js">', $html);
+        // Versionsnummer für alle; der Admin kommt per Klick zum Changelog
+        $v = 'Version ' . e(AppVersion::current());
+        $badge = $ctx->auth->isAdmin()
+            ? '<a class="version" href="' . e($ctx->url('/admin#changelog')) . '" title="Changelog anzeigen">' . $v . '</a>'
+            : '<span class="version">' . $v . '</span>';
+        $sub = '<p class="subtitle">Qualifikationsphase am Paulsen-Gymnasium Berlin</p>';
+        $html = str_replace($sub, $sub . "\n        " . $badge, $html);
         header('Cache-Control: no-store');
 
         return $html;
