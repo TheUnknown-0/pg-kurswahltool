@@ -1,8 +1,8 @@
 FROM php:8.3-apache
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libzip-dev libicu-dev default-mysql-client \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql zip intl pcntl \
+    && apt-get install -y --no-install-recommends libicu-dev default-mysql-client 7zip \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql intl pcntl \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 

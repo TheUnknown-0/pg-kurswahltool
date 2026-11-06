@@ -7,7 +7,7 @@ namespace App\Services;
 use App\Core\Database;
 
 /**
- * Liest Kurswahl-PDFs (einzeln oder in ZIP-Archiven) in die Datenbank ein und ordnet sie
+ * Liest Kurswahl-PDFs (einzeln oder in ZIP-/7z-Archiven, entpackt mit 7-Zip) in die Datenbank ein und ordnet sie
  * über den Login vorname.nachname den Schülerkonten zu.
  *
  * Gibt es für einen Schüler mehrere PDFs, gilt die mit dem jüngsten Erstelldatum.
@@ -16,12 +16,15 @@ final class PdfImporter
 {
     private const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
+    /** Archive, die 7-Zip für den Import entpackt. */
+    public const ARCHIVE_EXTENSIONS = ['zip', '7z'];
+
     public function __construct(private readonly Database $db)
     {
     }
 
     /**
-     * Importiert eine Datei (.pdf oder .zip) und protokolliert jedes enthaltene PDF.
+     * Importiert eine Datei (.pdf, .zip oder .7z) und protokolliert jedes enthaltene PDF.
      *
      * @return array{ok: int, failed: int}
      */
@@ -30,36 +33,12 @@ final class PdfImporter
         $result = ['ok' => 0, 'failed' => 0];
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
-        if ($ext === 'zip') {
-            $zip = new \ZipArchive();
-            if ($zip->open($path) !== true) {
-                $this->log($source, $filename, 'fehler', 'ZIP-Archiv lässt sich nicht öffnen.');
-                $result['failed']++;
-
-                return $result;
-            }
-            for ($i = 0; $i < $zip->numFiles; $i++) {
-                $stat = $zip->statIndex($i);
-                $name = (string) ($stat['name'] ?? '');
-                if (str_ends_with($name, '/') || str_starts_with(basename($name), '.') || !str_ends_with(strtolower($name), '.pdf')) {
-                    continue;
-                }
-                $label = $filename . ' → ' . $name;
-                if (($stat['size'] ?? 0) > self::MAX_PDF_BYTES) {
-                    $this->log($source, $label, 'fehler', 'Datei ist größer als 10 MB.');
-                    $result['failed']++;
-                    continue;
-                }
-                $data = $zip->getFromIndex($i);
-                $this->importPdf($data === false ? '' : $data, $label, $source, basename($name)) ? $result['ok']++ : $result['failed']++;
-            }
-            $zip->close();
-
-            return $result;
+        if (in_array($ext, self::ARCHIVE_EXTENSIONS, true)) {
+            return $this->importArchive($path, $filename, $source);
         }
 
         if ($ext !== 'pdf') {
-            $this->log($source, $filename, 'fehler', 'Nur .pdf- und .zip-Dateien werden eingelesen.');
+            $this->log($source, $filename, 'fehler', 'Nur .pdf-, .zip- und .7z-Dateien werden eingelesen.');
             $result['failed']++;
 
             return $result;
@@ -71,6 +50,61 @@ final class PdfImporter
             return $result;
         }
         $this->importPdf((string) file_get_contents($path), $filename, $source) ? $result['ok']++ : $result['failed']++;
+
+        return $result;
+    }
+
+    /**
+     * Entpackt ein Archiv mit 7-Zip und importiert jede enthaltene PDF.
+     *
+     * @return array{ok: int, failed: int}
+     */
+    private function importArchive(string $path, string $filename, string $source): array
+    {
+        $result = ['ok' => 0, 'failed' => 0];
+        try {
+            $entries = SevenZip::entries($path);
+        } catch (\Throwable $e) {
+            $this->log($source, $filename, 'fehler', 'Archiv lässt sich nicht öffnen: ' . $e->getMessage());
+            $result['failed']++;
+
+            return $result;
+        }
+        $wanted = [];
+        foreach ($entries as $entry) {
+            $name = str_replace('\\', '/', $entry['name']);
+            if (str_starts_with(basename($name), '.') || !str_ends_with(strtolower($name), '.pdf')) {
+                continue;
+            }
+            if ($entry['size'] > self::MAX_PDF_BYTES) {
+                $this->log($source, $filename . ' → ' . $name, 'fehler', 'Datei ist größer als 10 MB.');
+                $result['failed']++;
+                continue;
+            }
+            if ($entry['encrypted']) {
+                $this->log($source, $filename . ' → ' . $name, 'fehler', 'Datei ist verschlüsselt (Archiv mit Kennwort).');
+                $result['failed']++;
+                continue;
+            }
+            $wanted[] = $entry['name'];
+        }
+        try {
+            $contents = SevenZip::extract($path, $wanted);
+        } catch (\Throwable $e) {
+            $this->log($source, $filename, 'fehler', 'Archiv lässt sich nicht entpacken: ' . $e->getMessage());
+            $result['failed'] += count($wanted);
+
+            return $result;
+        }
+        foreach ($contents as $name => $data) {
+            $label = $filename . ' → ' . $name;
+            if ($data === null) {
+                $this->log($source, $label, 'fehler', 'Datei ließ sich nicht entpacken (verschlüsselt oder beschädigt?).');
+                $result['failed']++;
+                continue;
+            }
+            $this->importPdf($data, $label, $source, basename(str_replace('\\', '/', $name))) ? $result['ok']++ : $result['failed']++;
+        }
 
         return $result;
     }

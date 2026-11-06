@@ -10,6 +10,7 @@ use App\Services\Deadline;
 use App\Services\LoginName;
 use App\Services\PlanerPage;
 use App\Services\SchoolPdfPatcher;
+use App\Services\SevenZip;
 use App\Services\PdfImporter;
 use App\Services\UserImport;
 
@@ -80,7 +81,7 @@ final class AdminController extends Controller
         return ['success' => true] + $this->stats();
     }
 
-    /** Hochgeladene PDFs/ZIPs landen in der Warteschlange; der Worker liest sie im Hintergrund ein. */
+    /** Hochgeladene PDFs und Archive (.zip/.7z) landen in der Warteschlange; der Worker liest sie im Hintergrund ein. */
     public function upload(): string
     {
         $this->ctx->auth->requireAdmin();
@@ -104,8 +105,8 @@ final class AdminController extends Controller
                 continue;
             }
             $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-            if (!in_array($ext, ['pdf', 'zip'], true)) {
-                $errors[] = "{$name}: nur .pdf und .zip.";
+            if (!in_array($ext, ['pdf', 'zip', '7z'], true)) {
+                $errors[] = "{$name}: nur .pdf, .zip und .7z.";
                 continue;
             }
             // Eindeutiger Name; der Originalname bleibt für das Protokoll erhalten
@@ -351,7 +352,7 @@ final class AdminController extends Controller
     }
 
     /**
-     * Alle Formulare als ZIP: jede Original-PDF mit den Kreuzen der gespeicherten Wahl, unter dem
+     * Alle Formulare als 7z-Archiv (gepackt mit 7-Zip): jede Original-PDF mit den Kreuzen der gespeicherten Wahl, unter dem
      * Original-Dateinamen. Ohne gespeicherte Wahl bleibt die PDF unausgefüllt (siehe Hinweise.txt).
      */
     public function exportForms(): string
@@ -360,9 +361,7 @@ final class AdminController extends Controller
         $nur = (string) ($_GET['nur'] ?? '');
         $where = 'p.id IS NOT NULL' . ($nur === 'abgegeben' ? ' AND s.submitted_at IS NOT NULL' : '');
         $rows = $this->formRows($where, []);
-        $tmp = tempnam(sys_get_temp_dir(), 'kw');
-        $zip = new \ZipArchive();
-        $zip->open($tmp, \ZipArchive::OVERWRITE);
+        $files = [];
         $used = [];
         $notes = [];
         foreach ($rows as $r) {
@@ -375,23 +374,31 @@ final class AdminController extends Controller
             if ($note !== null) {
                 $notes[] = "{$r['login']}: {$note}";
             }
-            $name = (string) $r['filename'];
+            // Nur der Dateiname zählt; Pfadteile und Steuerzeichen gehören nicht ins Archiv
+            $name = preg_replace('/[\x00-\x1F\/\\\\]+/', '_', basename(str_replace('\\', '/', (string) $r['filename']))) ?: 'formular.pdf';
             $base = preg_replace('/\.pdf$/i', '', $name);
-            for ($i = 2; isset($used[strtolower($name)]); $i++) {
+            for ($i = 2; isset($used[strtolower($name)]) || strtolower($name) === 'hinweise.txt'; $i++) {
                 $name = "{$base}-{$i}.pdf";
             }
             $used[strtolower($name)] = true;
-            $zip->addFromString($name, $bytes);
+            $files[$name] = $bytes;
+        }
+        if ($files === [] && $notes === []) {
+            $notes[] = 'Keine Formulare vorhanden.';
         }
         if ($notes !== []) {
-            $zip->addFromString('Hinweise.txt', "Hinweise zum Export vom " . date('d.m.Y H:i') . "\r\n\r\n" . implode("\r\n", $notes) . "\r\n");
+            $files['Hinweise.txt'] = "Hinweise zum Export vom " . date('d.m.Y H:i') . "\r\n\r\n" . implode("\r\n", $notes) . "\r\n";
         }
-        $zip->close();
-        AdminLog::add($this->ctx, 'export', 'Formulare (ZIP' . ($nur === 'abgegeben' ? ', nur abgegebene' : '') . '): ' . count($used) . ' PDFs');
-        $data = (string) file_get_contents($tmp);
-        @unlink($tmp);
-        header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="Kurswahlformulare_' . date('Y-m-d_Hi') . '.zip"');
+        $tmp = sys_get_temp_dir() . '/kw-export-' . bin2hex(random_bytes(8)) . '.7z';
+        try {
+            SevenZip::create($tmp, $files);
+            $data = (string) file_get_contents($tmp);
+        } finally {
+            @unlink($tmp);
+        }
+        AdminLog::add($this->ctx, 'export', 'Formulare (7z' . ($nur === 'abgegeben' ? ', nur abgegebene' : '') . '): ' . count($used) . ' PDFs');
+        header('Content-Type: application/x-7z-compressed');
+        header('Content-Disposition: attachment; filename="Kurswahlformulare_' . date('Y-m-d_Hi') . '.7z"');
 
         return $data;
     }
@@ -536,7 +543,7 @@ final class AdminController extends Controller
     {
         $db = $this->ctx->db;
         $queue = glob($this->ctx->config['import']['queue_dir'] . '/*') ?: [];
-        $folder = glob($this->ctx->config['import']['folder'] . '/*.{pdf,PDF,zip,ZIP}', GLOB_BRACE) ?: [];
+        $folder = glob($this->ctx->config['import']['folder'] . '/*.{pdf,PDF,zip,ZIP,7z,7Z}', GLOB_BRACE) ?: [];
         $beat = $db->fetchValue("SELECT updated_at FROM settings WHERE name = 'worker_heartbeat'");
 
         return [

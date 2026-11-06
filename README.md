@@ -9,7 +9,7 @@ Form der 5. PK setzt. Alles andere bleibt Byte für Byte unverändert.
 
 | Wer | Was |
 |---|---|
-| **Admin** | lädt die Kurswahl-PDFs des Schulservers hoch (einzeln, mehrere oder als ZIP) **oder** legt sie in den Import-Ordner. Ein Hintergrund-Worker liest sie ein und ordnet sie über den Namen dem Konto `vorname.nachname` zu. |
+| **Admin** | lädt die Kurswahl-PDFs des Schulservers hoch (einzeln, mehrere oder als ZIP-/7z-Archiv, entpackt mit 7-Zip) **oder** legt sie in den Import-Ordner. Ein Hintergrund-Worker liest sie ein und ordnet sie über den Namen dem Konto `vorname.nachname` zu. |
 | **Admin** | importiert die Schülerkonten mit Passwörtern (CSV, siehe unten). Passende PDFs werden danach automatisch zugeordnet; den Rest ordnet der Admin von Hand zu. |
 | **Schüler** | meldet sich an. Name, Klasse, Jahrgang und Schüler-ID kommen aus seiner PDF. Die Wahl wird automatisch auf dem Server gespeichert. Ändert er auf zwei Geräten gleichzeitig, fragt der Planer, welche Wahl gelten soll. |
 | **Schüler (Notfall)** | kann seine eigene Schul-PDF hochladen. Dann bleiben PDF, Stammdaten und Wahl **nur in diesem Browser** und gehen nicht an den Server. Mit „Eigene PDF entfernen“ kehrt er zum Server-Stand zurück. Enthält die PDF schon Kreuze, werden sie übernommen (außer den Sportkursen). |
@@ -22,7 +22,7 @@ Form der 5. PK setzt. Alles andere bleibt Byte für Byte unverändert.
 | **Alle** | können ihr Passwort selbst ändern (mindestens 8 Zeichen). |
 | **Admin** | stellt eine Abgabefrist ein und wählt, was danach gilt: nur noch ansehen, Anmeldung gesperrt oder nur Hinweis. |
 | **Admin** | sieht in der Schülerliste, wer gespeichert bzw. abgegeben hat und wie viele Fehler die Wahl noch hat, öffnet die Wahl eines Schülers im Planer (nur lesen) und exportiert direkt aus der Liste je Schüler das ausgefüllte Formular (PDF) oder seine Wahl (CSV). |
-| **Admin** | exportiert alle Formulare als ZIP (jede Original-PDF mit den Kreuzen der gespeicherten Wahl, byte-gleich und unter dem Original-Dateinamen; wahlweise nur abgegebene) und alle Wahlen als CSV für Excel. |
+| **Admin** | exportiert alle Formulare als 7z-Archiv (gepackt mit 7-Zip; jede Original-PDF mit den Kreuzen der gespeicherten Wahl, byte-gleich und unter dem Original-Dateinamen; wahlweise nur abgegebene) und alle Wahlen als CSV für Excel. |
 
 Liegt für ein Konto keine PDF vor, erzeugt der Planer das Formular selbst aus der eingebetteten Vorlage
 (siehe `tools/`). Name, Klasse, Jahrgang und Schüler-ID trägt der Schüler dann von Hand ein.
@@ -85,7 +85,7 @@ Die Datenbank enthält alles: Konten, PDFs und gespeicherte Wahlen.
 
 ## Lokale Entwicklung ohne Docker
 
-PHP ≥ 8.2 (`pdo_mysql`, `zip`, `intl`) und MariaDB:
+PHP ≥ 8.2 (`pdo_mysql`, `intl`), MariaDB und 7-Zip (`7z` oder `7zz` im `PATH`, sonst Pfad in `SEVENZIP_BIN`):
 
 ```bash
 export DB_HOST=127.0.0.1 DB_USER=kurswahl DB_PASS=... DB_NAME=kurswahl APP_ENV=development ADMIN_PASSWORD=...
