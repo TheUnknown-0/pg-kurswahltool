@@ -505,8 +505,12 @@ final class AdminController extends Controller
     {
         $this->ctx->auth->requireAdmin();
         $this->verifyCsrf();
-        $u = (new UpdateCheck($this->ctx->db, $this->ctx->config['update']))->run();
-        if (!$u['enabled']) {
+        $u = (new UpdateCheck($this->ctx->db, $this->ctx->config['update']))->run(UpdateCheck::MANUAL_MIN_AGE);
+        if ($u['skipped'] === 'kuerzlich') {
+            $this->ctx->session->flash('ok', 'Gerade eben erst geprüft – bitte in einer Minute erneut versuchen.');
+        } elseif ($u['skipped'] === 'gesperrt') {
+            $this->ctx->session->flash('error', 'GitHub begrenzt gerade die Abfragen. Nächster Versuch ab ' . date('d.m.Y H:i', $u['blocked_until']) . '.');
+        } elseif (!$u['enabled']) {
             $this->ctx->session->flash('error', 'Die Update-Prüfung ist abgeschaltet (UPDATE_CHECK=0).');
         } elseif (!$u['ok']) {
             $this->ctx->session->flash('error', 'Update-Prüfung fehlgeschlagen: ' . $u['error']);

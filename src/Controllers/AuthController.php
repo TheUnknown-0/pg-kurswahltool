@@ -52,9 +52,9 @@ final class AuthController extends Controller
 
         if ($user['role'] === 'admin') {
             AdminLog::add($this->ctx, 'login');
-            // Bei jeder Admin-Anmeldung nach Updates sehen (kurzer Timeout, Fehler stören die Anmeldung nicht).
+            // Bei der Admin-Anmeldung nach Updates sehen (höchstens alle 15 Minuten, kurzer Timeout, Fehler stören die Anmeldung nicht).
             // Den Hinweis zeigt die Admin-Navigation auf jeder Seite.
-            (new UpdateCheck($this->ctx->db, $this->ctx->config['update']))->run();
+            (new UpdateCheck($this->ctx->db, $this->ctx->config['update']))->run(UpdateCheck::LOGIN_MIN_AGE);
         }
 
         return $this->redirect($user['role'] === 'admin' ? '/admin' : '/');

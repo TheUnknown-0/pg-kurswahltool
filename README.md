@@ -86,7 +86,13 @@ Seite unter dem Titel zu sehen; Admins öffnen per Klick darauf den Changelog un
 Geprüft wird automatisch bei jeder Admin-Anmeldung und einmal täglich durch den Worker: Der Server liest
 `VERSION` (und bei einer neueren Nummer `CHANGELOG.md`) aus dem Branch `main` auf GitHub. Ist dort eine
 höhere Nummer, zeigt der Admin-Bereich auf jeder Seite einen Hinweis mit den Neuerungen. Läuft der Server
-hinter einem Proxy, wird `HTTPS_PROXY` beachtet. Aktualisiert wird von Hand:
+hinter einem Proxy, wird `HTTPS_PROXY` beachtet.
+
+Damit GitHub die Abfragen nicht begrenzt: Die Dateien kommen von `raw.githubusercontent.com` (nicht über die
+GitHub-API mit ihrem Limit von 60 Anfragen pro Stunde). Bei der Anmeldung wird höchstens alle 15 Minuten
+gefragt, per Knopf höchstens jede Minute. `VERSION` wird mit ETag abgefragt, `CHANGELOG.md` nur geladen,
+wenn eine neue höhere Version auftaucht. Antwortet GitHub mit 429 bzw. 403 (Rate Limit), ruht die Prüfung
+bis `Retry-After`, sonst eine Stunde. Aktualisiert wird von Hand:
 
 ```bash
 git pull && docker compose up -d --build

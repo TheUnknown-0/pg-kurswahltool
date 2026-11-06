@@ -7,7 +7,7 @@ sonst merken die laufenden Installationen nichts vom Update.
 ## 1.0.0 – 2026-11-06
 
 - Versionsnummer auf allen Seiten; Admins sehen per Klick auf die Nummer diesen Changelog.
-- Update-Prüfung bei jeder Admin-Anmeldung und einmal täglich: Liegt auf GitHub eine neuere Version vor, erscheint ein Hinweis im Admin-Bereich.
+- Update-Prüfung bei der Admin-Anmeldung (höchstens alle 15 Minuten), einmal täglich und per Knopf „Nach neuen Versionen suchen“: Liegt auf GitHub eine neuere Version vor, erscheint ein Hinweis im Admin-Bereich. Schonend für die Limits von GitHub (ETag, Pause nach Rate Limit).
 - Archive mit 7-Zip: Export aller Formulare als .7z, Import von .zip und .7z.
 - Formular-Export ohne Serverfehler; Formular (PDF) und Wahl (CSV) je Schüler direkt aus der Übersicht.
 - Kursangebot je Jahrgang (Fächer, Halbjahre, Zusatz- und Sportkurse), Statistik je Jahrgang, Jahrgang löschen.
