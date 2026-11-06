@@ -46,6 +46,7 @@ return static function (Router $r): void {
     $r->get('/admin/statistik', [StatistikController::class, 'index']);
     $r->get('/admin/einstellungen', [AdminController::class, 'settings']);
     $r->get('/admin/protokoll', [AdminController::class, 'log']);
+    $r->post('/admin/update-check', [AdminController::class, 'updateCheck']);
     $r->get('/admin/students/{id}', [AdminController::class, 'viewStudent']);
     $r->get('/admin/students/{id}/pdf', [AdminController::class, 'studentPdf']);
     $r->get('/admin/students/{id}/form', [AdminController::class, 'studentForm']);

@@ -14,6 +14,13 @@ $items = ['uebersicht' => ['/admin', 'Übersicht'], 'jahrgaenge' => ['/admin/jah
     <button class="btn sm" type="submit">Abmelden</button>
   </form>
 </nav>
+<?php $update = (new \App\Services\UpdateCheck($ctx->db, $ctx->config['update']))->status();
+if ($update['available']): ?>
+  <p class="msg warn update-note">
+    Update verfügbar: Version <?= e($update['latest']) ?> (installiert <?= e($update['current']) ?>).
+    <button type="button" class="linkbtn" data-dialog="changelog">Was ist neu?</button>
+  </p>
+<?php endif; ?>
 <?php foreach ($flashes ?? [] as $f): ?>
   <p class="msg <?= e($f['type']) ?>"><?= e($f['message']) ?></p>
 <?php endforeach; ?>

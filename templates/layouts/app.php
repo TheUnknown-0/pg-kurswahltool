@@ -12,6 +12,7 @@
   <div>
     <h1>Kurswahl-Planer</h1>
     <p class="subtitle"><?= e($subtitle ?? 'Qualifikationsphase am Paulsen-Gymnasium Berlin') ?></p>
+    <?= $view->renderPartial('partials/version') ?>
   </div>
   <img class="logo" src="https://5pk.pg-hub.de/assets/logo-frei.png" alt="Paulsen-Gymnasium" data-hide-on-error>
 </header>

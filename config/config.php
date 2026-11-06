@@ -35,4 +35,10 @@ return [
         'interval_seconds' => (int) $env('IMPORT_INTERVAL', '15'),
         'max_upload_bytes' => 200 * 1024 * 1024,
     ],
+    'update' => [
+        // Update-Prüfung bei Admin-Anmeldung und täglich; UPDATE_CHECK=0 schaltet sie ab
+        'enabled' => $env('UPDATE_CHECK', '1') !== '0',
+        // Hier liegen VERSION und CHANGELOG.md des neuesten Stands
+        'url' => $env('UPDATE_URL', 'https://raw.githubusercontent.com/TheUnknown-0/pg-kurswahltool/main'),
+    ],
 ];

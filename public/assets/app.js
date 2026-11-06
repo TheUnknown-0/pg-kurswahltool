@@ -35,3 +35,15 @@ document.querySelectorAll('.pbox').forEach(cb => {
     document.querySelectorAll(`.pbox[data-pair="${cb.dataset.pair}"]`).forEach(o => { o.checked = cb.checked; });
   });
 });
+
+// Versionsnummer: Changelog-Dialog für Admins (öffnet auch über #changelog in der Adresse)
+(() => {
+  const dlg = document.getElementById('changelog');
+  if (!dlg || typeof dlg.showModal !== 'function') return;
+  document.querySelectorAll('[data-dialog="changelog"]').forEach(b => b.addEventListener('click', () => dlg.showModal()));
+  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+  if (location.hash === '#changelog') {
+    dlg.showModal();
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+})();

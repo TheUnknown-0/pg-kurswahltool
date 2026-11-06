@@ -13,6 +13,7 @@ declare(strict_types=1);
  */
 
 use App\Services\PdfImporter;
+use App\Services\UpdateCheck;
 
 [$config, $db] = require dirname(__DIR__) . '/src/bootstrap.php';
 
@@ -51,6 +52,12 @@ do {
             "INSERT INTO settings (name, value) VALUES ('worker_heartbeat', ?) ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = CURRENT_TIMESTAMP",
             [date('c')],
         );
+        // Einmal täglich nach Updates sehen (zusätzlich bei jeder Admin-Anmeldung)
+        $updates = new UpdateCheck($db, $config['update']);
+        if ($updates->due()) {
+            $u = $updates->run();
+            $say($u['ok'] ? "Update-Prüfung: neueste Version {$u['latest']}, installiert {$u['current']}." : "Update-Prüfung fehlgeschlagen: {$u['error']}");
+        }
         $ensureDirs();
         $importer = new PdfImporter($db);
 

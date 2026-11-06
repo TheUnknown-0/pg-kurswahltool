@@ -5,3 +5,4 @@ import/*
 node_modules
 tools
 *.md
+!CHANGELOG.md
