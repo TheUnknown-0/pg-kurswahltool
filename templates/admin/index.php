@@ -29,12 +29,12 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
   <div class="grid2">
     <section class="card">
       <h2>Kurswahl-PDFs einlesen</h2>
-      <p class="muted small">PDFs des Schulservers einzeln oder als ZIP. Die Verarbeitung läuft im Hintergrund; jede PDF wird
+      <p class="muted small">PDFs des Schulservers einzeln oder als Archiv (ZIP oder 7z). Die Verarbeitung läuft im Hintergrund; jede PDF wird
         über den Namen dem Konto <code>vorname.nachname</code> zugeordnet. Alternativ Dateien in den Import-Ordner
         des Servers legen.</p>
       <form method="post" action="<?= e($ctx->url('/admin/upload')) ?>" enctype="multipart/form-data">
         <?= $csrf->field() ?>
-        <input type="file" name="files[]" accept=".pdf,.zip,application/pdf,application/zip" multiple required>
+        <input type="file" name="files[]" accept=".pdf,.zip,.7z,application/pdf,application/zip,application/x-7z-compressed" multiple required>
         <p><button class="btn primary" type="submit">Hochladen</button></p>
       </form>
     </section>
@@ -55,11 +55,12 @@ $fmt = static fn (?string $d): string => $d ? date('d.m.Y H:i', strtotime($d)) :
   <section class="card" id="export">
     <h2>Export</h2>
     <p class="muted small">Formulare: jede Kurswahl-PDF des Schulservers mit den Kreuzen der gespeicherten Wahl, byte-gleich
-      zum Original und unter dem Original-Dateinamen. Ohne gespeicherte Wahl bleibt die PDF unausgefüllt (siehe <code>Hinweise.txt</code> im ZIP).
+      zum Original und unter dem Original-Dateinamen. Ohne gespeicherte Wahl bleibt die PDF unausgefüllt (siehe <code>Hinweise.txt</code> im Archiv).
+      Die Formulare kommen als 7z-Archiv; zum Öffnen unter Windows z.&nbsp;B. 7-Zip verwenden.
       Einzelne Schüler exportierst du unten in der Schülerliste (Spalte „Export“).</p>
     <p>
-      <a class="btn primary" href="<?= e($ctx->url('/admin/export/formulare')) ?>">Alle Formulare (ZIP)</a>
-      <a class="btn" href="<?= e($ctx->url('/admin/export/formulare?nur=abgegeben')) ?>">Nur abgegebene (ZIP)</a>
+      <a class="btn primary" href="<?= e($ctx->url('/admin/export/formulare')) ?>">Alle Formulare (7z)</a>
+      <a class="btn" href="<?= e($ctx->url('/admin/export/formulare?nur=abgegeben')) ?>">Nur abgegebene (7z)</a>
       <a class="btn" href="<?= e($ctx->url('/admin/export/wahlen')) ?>">Alle Wahlen (CSV)</a>
     </p>
   </section>

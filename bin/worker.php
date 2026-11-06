@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Hintergrund-Import: liest Kurswahl-PDFs (oder ZIPs) aus der Upload-Warteschlange und dem
+ * Hintergrund-Import: liest Kurswahl-PDFs (oder ZIP-/7z-Archive) aus der Upload-Warteschlange und dem
  * Import-Ordner ein. Läuft als eigener Container (siehe compose.yaml).
  *
  * Verarbeitete Dateien aus dem Import-Ordner wandern nach import/verarbeitet/, fehlerhafte
@@ -68,7 +68,7 @@ do {
         // 2. Import-Ordner
         foreach (glob($folder . '/*') ?: [] as $f) {
             $ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
-            if ($stop || !is_file($f) || !in_array($ext, ['pdf', 'zip'], true) || str_starts_with(basename($f), '.') || !$stable($f)) {
+            if ($stop || !is_file($f) || !in_array($ext, ['pdf', 'zip', '7z'], true) || str_starts_with(basename($f), '.') || !$stable($f)) {
                 continue;
             }
             $name = basename($f);

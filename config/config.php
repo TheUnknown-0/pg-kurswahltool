@@ -30,7 +30,7 @@ return [
     'import' => [
         // Hochgeladene Dateien warten hier auf den Worker
         'queue_dir' => $env('QUEUE_DIR', $root . '/uploads/queue'),
-        // Import-Ordner: PDFs oder ZIPs hier ablegen, der Worker liest sie ein
+        // Import-Ordner: PDFs oder ZIP-/7z-Archive hier ablegen, der Worker liest sie ein
         'folder' => $env('IMPORT_DIR', $root . '/import'),
         'interval_seconds' => (int) $env('IMPORT_INTERVAL', '15'),
         'max_upload_bytes' => 200 * 1024 * 1024,
