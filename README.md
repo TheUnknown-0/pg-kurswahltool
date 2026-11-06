@@ -89,8 +89,8 @@ höhere Nummer, zeigt der Admin-Bereich auf jeder Seite einen Hinweis mit den Ne
 hinter einem Proxy, wird `HTTPS_PROXY` beachtet.
 
 Damit GitHub die Abfragen nicht begrenzt: Die Dateien kommen von `raw.githubusercontent.com` (nicht über die
-GitHub-API mit ihrem Limit von 60 Anfragen pro Stunde). Bei der Anmeldung wird höchstens alle 15 Minuten
-gefragt, per Knopf höchstens jede Minute. `VERSION` wird mit ETag abgefragt, `CHANGELOG.md` nur geladen,
+GitHub-API mit ihrem Limit von 60 Anfragen pro Stunde). Bei der Anmeldung und per Knopf wird höchstens
+einmal pro Minute gefragt. `VERSION` wird mit ETag abgefragt, `CHANGELOG.md` nur geladen,
 wenn eine neue höhere Version auftaucht. Antwortet GitHub mit 429 bzw. 403 (Rate Limit), ruht die Prüfung
 bis `Retry-After`, sonst eine Stunde. Aktualisiert wird von Hand:
 

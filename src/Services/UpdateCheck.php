@@ -15,8 +15,8 @@ final class UpdateCheck
 {
     private const KEY = 'update_check';
     public const INTERVAL = 86400;
-    /** Bei der Anmeldung höchstens alle 15 Minuten, per Knopf höchstens jede Minute fragen */
-    public const LOGIN_MIN_AGE = 900;
+    /** Bei der Anmeldung und per Knopf höchstens einmal pro Minute fragen */
+    public const LOGIN_MIN_AGE = 60;
     public const MANUAL_MIN_AGE = 60;
 
     /** @param array{enabled: bool, url: string} $config */
