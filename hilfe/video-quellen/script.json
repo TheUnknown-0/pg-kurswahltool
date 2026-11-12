@@ -1,0 +1,58 @@
+{
+  "voice": "Charon",
+  "style": "Freundlicher, klarer Erzähler eines modernen Erklärvideos für Schülerinnen und Schüler. Ruhig, zugewandt und motivierend, natürliches Sprechtempo, deutliche Aussprache, Hochdeutsch.",
+  "scenes": [
+    {"id": "intro", "title": "Kurswahl Q1–Q4", "beats": [
+      "Die Kurswahl für die Qualifikationsphase. Klingt erst mal kompliziert, ist mit dem richtigen Plan aber gut machbar.",
+      "Vor dir liegen vier Halbjahre: Q eins bis Q vier. In dieser Zeit sammelst du die Kurse, aus denen später dein Abitur entsteht.",
+      "Du wählst zwei Leistungskurse, insgesamt fünf Prüfungskomponenten und mindestens vierzig Kurse.",
+      "In diesem Video gehen wir das Schritt für Schritt durch: von deiner Ausgangslage bis zur abgegebenen Wahl."
+    ]},
+    {"id": "ausgangslage", "title": "Deine Ausgangslage", "beats": [
+      "Schritt eins: deine Ausgangslage. Sie entscheidet, welche Fächer du überhaupt wählen darfst.",
+      "Wichtig sind deine Fremdsprachen, und seit welcher Klasse du sie lernst. Eine Sprache, die du erst in Klasse zehn begonnen hast, kann kein Leistungskurs sein und läuft bis zum Ende weiter.",
+      "Dann dein Wahlpflichtfach aus Klasse zehn. Informatik, Sozialwissenschaften und Darstellendes Spiel kannst du nur wählen, wenn du sie dort schon hattest.",
+      "Und zum Schluss: Warst du in der Ruder-AG? Oder hast du ein Attest, das dich dauerhaft vom Sport befreit?"
+    ]},
+    {"id": "lk", "title": "Zwei Leistungskurse", "beats": [
+      "Schritt zwei: die beiden Leistungskurse. Sie laufen alle vier Halbjahre mit fünf Stunden pro Woche und zählen im Abitur doppelt.",
+      "Für den ersten Leistungskurs gilt eine strenge Regel. Er muss Deutsch, Mathematik, eine Naturwissenschaft oder eine Fremdsprache sein, die du spätestens seit Klasse neun lernst.",
+      "Beim zweiten Leistungskurs ist mehr möglich: zusätzlich Musik, Kunst, Geschichte, Politikwissenschaft, Geografie, Informatik oder Sozialwissenschaften.",
+      "Und bilinguale Kurse gibt es nur als Grundkurs."
+    ]},
+    {"id": "pruefung", "title": "Prüfungsfächer und 5. PK", "beats": [
+      "Schritt drei: das dritte und vierte Prüfungsfach, und die fünfte Prüfungskomponente.",
+      "Unter deinen vier Prüfungsfächern müssen mindestens zwei aus Deutsch, Mathematik und Fremdsprache sein.",
+      "Alle fünf Komponenten zusammen decken die drei Aufgabenfelder ab: das sprachliche, das gesellschaftswissenschaftliche und das naturwissenschaftliche.",
+      "Und alle fünf belegst du durchgehend, von Q eins bis Q vier.",
+      "Bei der fünften Komponente wählst du zwischen Präsentationsprüfung und Besonderer Lernleistung. Bei der Präsentationsprüfung muss das Referenzfach ein eigenes, fünftes Fach sein."
+    ]},
+    {"id": "pflichten", "title": "Belegpflichten", "beats": [
+      "Schritt vier: die Belegpflichten. Diese Kurse brauchst du, ganz egal, was du prüfst.",
+      "Deutsch und Mathematik durchgehend. Eine Fremdsprache durchgehend. Und eine Naturwissenschaft durchgehend. Ist das nur Biologie, kommen zwei Kurse Physik oder Chemie dazu.",
+      "Dazu ein gesellschaftswissenschaftliches Fach durchgehend. Ist das Geschichte, kommt Politikwissenschaft in Q drei und Q vier dazu. Sonst ist es Geschichte in Q drei und Q vier.",
+      "Außerdem zwei Kurse Musik, Kunst oder Darstellendes Spiel.",
+      "Grundkurse belegst du dabei immer im Block: Q eins und Q zwei, oder Q drei und Q vier."
+    ]},
+    {"id": "sport", "title": "Sport und Zusatzkurse", "beats": [
+      "Schritt fünf: Sport und Zusatzkurse.",
+      "In jedem Halbjahr wählst du einen Sportkurs. Höchstens drei davon dürfen Ballspiele sein, und denselben Kurs nimmst du höchstens zweimal.",
+      "Ist Sport dein viertes Prüfungsfach oder deine fünfte Komponente, kommen zwei Kurse Sporttheorie dazu.",
+      "Zusatzkurse wie Astronomie oder Kreatives Schreiben zählen zu deinen Kursen. Ins Abitur einbringen kannst du sie aber nur, wenn du im passenden Fach mindestens zwei reguläre Kurse hast."
+    ]},
+    {"id": "umfang", "title": "Reicht das?", "beats": [
+      "Jetzt wird gerechnet. Du brauchst mindestens vierzig Kurse und mindestens sechsundsechzig Jahreswochenstunden.",
+      "Ein Leistungskurs bringt fünf Stunden, ein Grundkurs drei, Sport zwei. Alles zusammenzählen, und dann durch zwei teilen.",
+      "Ein Beispiel: Mathe und Englisch als Leistungskurse. Geschichte und Biologie als drittes und viertes Prüfungsfach. Und Kunst als Präsentationsprüfung.",
+      "Dazu Deutsch, Chemie, Philosophie, Politik im zweiten Jahr, ein Zusatzkurs und Sport. Das sind zehn Kurse und dreiunddreißig Stunden pro Halbjahr. Also genau vierzig Kurse und genau sechsundsechzig Stunden.",
+      "Eine Grenze gibt es noch: Höchstens vierundzwanzig Grundkurse dürfen einbringpflichtig sein. Hier sind es neunzehn."
+    ]},
+    {"id": "abgabe", "title": "Prüfen, beraten, abgeben", "beats": [
+      "Zum Schluss: prüfen, beraten, abgeben.",
+      "Der Kurswahl-Planer prüft deine Wahl sofort. Rot musst du beheben. Orange besprichst du mit dem Pädagogischen Koordinator.",
+      "Nimm deine Wahl mit zur Beratung. Wenn alles passt, klickst du auf: Wahl abgeben. Danach ist sie gesperrt.",
+      "Drucke dein Kurswahlformular in Originalgröße aus, gib es rechtzeitig ab, und denk an den Kurswahlbogen im Lernraum.",
+      "Alle Regeln findest du noch einmal im Leitfaden. Viel Erfolg bei deiner Kurswahl!"
+    ]}
+  ]
+}

@@ -1,0 +1,259 @@
+1
+00:00:01,890 --> 00:00:04,451
+Die Kurswahl für die Qualifikationsphase.
+
+2
+00:00:04,501 --> 00:00:09,100
+Klingt erst mal kompliziert, ist mit dem richtigen Plan aber gut machbar.
+
+3
+00:00:09,450 --> 00:00:12,428
+Vor dir liegen vier Halbjahre: Q1 bis Q4.
+
+4
+00:00:12,478 --> 00:00:18,040
+In dieser Zeit sammelst du die Kurse, aus denen später dein Abitur entsteht.
+
+5
+00:00:18,390 --> 00:00:25,740
+Du wählst zwei Leistungskurse, insgesamt fünf Prüfungskomponenten und mindestens vierzig Kurse.
+
+6
+00:00:26,090 --> 00:00:31,600
+In diesem Video gehen wir das Schritt für Schritt durch: von deiner Ausgangslage bis zur abgegebenen Wahl.
+
+7
+00:00:34,290 --> 00:00:36,467
+Schritt eins: deine Ausgangslage.
+
+8
+00:00:36,517 --> 00:00:40,380
+Sie entscheidet, welche Fächer du überhaupt wählen darfst.
+
+9
+00:00:40,730 --> 00:00:45,116
+Wichtig sind deine Fremdsprachen, und seit welcher Klasse du sie lernst.
+
+10
+00:00:45,166 --> 00:00:52,200
+Eine Sprache, die du erst in Klasse zehn begonnen hast, kann kein Leistungskurs sein und läuft bis zum Ende weiter.
+
+11
+00:00:52,550 --> 00:00:55,191
+Dann dein Wahlpflichtfach aus Klasse zehn.
+
+12
+00:00:55,241 --> 00:01:02,240
+Informatik, Sozialwissenschaften und Darstellendes Spiel kannst du nur wählen, wenn du sie dort schon hattest.
+
+13
+00:01:02,590 --> 00:01:05,512
+Und zum Schluss: Warst du in der Ruder-AG?
+
+14
+00:01:05,562 --> 00:01:09,900
+Oder hast du ein Attest, das dich dauerhaft vom Sport befreit?
+
+15
+00:01:12,630 --> 00:01:15,308
+Schritt zwei: die beiden Leistungskurse.
+
+16
+00:01:15,358 --> 00:01:21,240
+Sie laufen alle vier Halbjahre mit fünf Stunden pro Woche und zählen im Abitur doppelt.
+
+17
+00:01:21,590 --> 00:01:24,810
+Für den ersten Leistungskurs gilt eine strenge Regel.
+
+18
+00:01:24,860 --> 00:01:32,400
+Er muss Deutsch, Mathematik, eine Naturwissenschaft oder eine Fremdsprache sein, die du spätestens seit Klasse neun lernst.
+
+19
+00:01:32,750 --> 00:01:43,540
+Beim zweiten Leistungskurs ist mehr möglich: zusätzlich Musik, Kunst, Geschichte, Politikwissenschaft, Geografie, Informatik oder Sozialwissenschaften.
+
+20
+00:01:43,890 --> 00:01:46,480
+Und bilinguale Kurse gibt es nur als Grundkurs.
+
+21
+00:01:49,190 --> 00:01:54,660
+Schritt drei: das dritte und vierte Prüfungsfach, und die fünfte Prüfungskomponente.
+
+22
+00:01:55,010 --> 00:02:02,280
+Unter deinen vier Prüfungsfächern müssen mindestens zwei aus Deutsch, Mathematik und Fremdsprache sein.
+
+23
+00:02:02,630 --> 00:02:11,480
+Alle fünf Komponenten zusammen decken die drei Aufgabenfelder ab: das sprachliche, das gesellschaftswissenschaftliche und das naturwissenschaftliche.
+
+24
+00:02:11,830 --> 00:02:16,360
+Und alle fünf belegst du durchgehend, von Q1 bis Q4.
+
+25
+00:02:16,710 --> 00:02:22,671
+Bei der fünften Komponente wählst du zwischen Präsentationsprüfung und Besonderer Lernleistung.
+
+26
+00:02:22,721 --> 00:02:27,860
+Bei der Präsentationsprüfung muss das Referenzfach ein eigenes, fünftes Fach sein.
+
+27
+00:02:30,590 --> 00:02:32,918
+Schritt vier: die Belegpflichten.
+
+28
+00:02:32,968 --> 00:02:36,520
+Diese Kurse brauchst du, ganz egal, was du prüfst.
+
+29
+00:02:36,870 --> 00:02:39,157
+Deutsch und Mathematik durchgehend.
+
+30
+00:02:39,208 --> 00:02:41,161
+Eine Fremdsprache durchgehend.
+
+31
+00:02:41,211 --> 00:02:43,766
+Und eine Naturwissenschaft durchgehend.
+
+32
+00:02:43,816 --> 00:02:48,040
+Ist das nur Biologie, kommen zwei Kurse Physik oder Chemie dazu.
+
+33
+00:02:48,390 --> 00:02:52,053
+Dazu ein gesellschaftswissenschaftliches Fach durchgehend.
+
+34
+00:02:52,103 --> 00:02:56,151
+Ist das Geschichte, kommt Politikwissenschaft in Q3 und Q4 dazu.
+
+35
+00:02:56,201 --> 00:02:58,520
+Sonst ist es Geschichte in Q3 und Q4.
+
+36
+00:02:58,870 --> 00:03:03,040
+Außerdem zwei Kurse Musik, Kunst oder Darstellendes Spiel.
+
+37
+00:03:03,390 --> 00:03:08,880
+Grundkurse belegst du dabei immer im Block: Q1 und Q2, oder Q3 und Q4.
+
+38
+00:03:11,570 --> 00:03:15,120
+Schritt fünf: Sport und Zusatzkurse.
+
+39
+00:03:15,470 --> 00:03:18,293
+In jedem Halbjahr wählst du einen Sportkurs.
+
+40
+00:03:18,343 --> 00:03:24,300
+Höchstens drei davon dürfen Ballspiele sein, und denselben Kurs nimmst du höchstens zweimal.
+
+41
+00:03:24,650 --> 00:03:31,120
+Ist Sport dein viertes Prüfungsfach oder deine fünfte Komponente, kommen zwei Kurse Sporttheorie dazu.
+
+42
+00:03:31,470 --> 00:03:35,831
+Zusatzkurse wie Astronomie oder Kreatives Schreiben zählen zu deinen Kursen.
+
+43
+00:03:35,881 --> 00:03:42,100
+Ins Abitur einbringen kannst du sie aber nur, wenn du im passenden Fach mindestens zwei reguläre Kurse hast.
+
+44
+00:03:44,770 --> 00:03:46,049
+Jetzt wird gerechnet.
+
+45
+00:03:46,099 --> 00:03:51,620
+Du brauchst mindestens vierzig Kurse und mindestens sechsundsechzig Jahreswochenstunden.
+
+46
+00:03:51,970 --> 00:03:56,932
+Ein Leistungskurs bringt fünf Stunden, ein Grundkurs drei, Sport zwei.
+
+47
+00:03:56,982 --> 00:04:00,440
+Alles zusammenzählen, und dann durch zwei teilen.
+
+48
+00:04:00,790 --> 00:04:04,261
+Ein Beispiel: Mathe und Englisch als Leistungskurse.
+
+49
+00:04:04,311 --> 00:04:08,390
+Geschichte und Biologie als drittes und viertes Prüfungsfach.
+
+50
+00:04:08,440 --> 00:04:10,760
+Und Kunst als Präsentationsprüfung.
+
+51
+00:04:11,110 --> 00:04:17,160
+Dazu Deutsch, Chemie, Philosophie, Politik im zweiten Jahr, ein Zusatzkurs und Sport.
+
+52
+00:04:17,210 --> 00:04:21,466
+Das sind zehn Kurse und dreiunddreißig Stunden pro Halbjahr.
+
+53
+00:04:21,516 --> 00:04:25,700
+Also genau vierzig Kurse und genau sechsundsechzig Stunden.
+
+54
+00:04:26,050 --> 00:04:31,681
+Eine Grenze gibt es noch: Höchstens vierundzwanzig Grundkurse dürfen einbringpflichtig sein.
+
+55
+00:04:31,731 --> 00:04:33,040
+Hier sind es neunzehn.
+
+56
+00:04:35,730 --> 00:04:39,680
+Zum Schluss: prüfen, beraten, abgeben.
+
+57
+00:04:40,030 --> 00:04:43,207
+Der Kurswahl-Planer prüft deine Wahl sofort.
+
+58
+00:04:43,257 --> 00:04:44,747
+Rot musst du beheben.
+
+59
+00:04:44,797 --> 00:04:48,780
+Orange besprichst du mit dem Pädagogischen Koordinator.
+
+60
+00:04:49,130 --> 00:04:51,352
+Nimm deine Wahl mit zur Beratung.
+
+61
+00:04:51,402 --> 00:04:54,588
+Wenn alles passt, klickst du auf: Wahl abgeben.
+
+62
+00:04:54,638 --> 00:04:56,240
+Danach ist sie gesperrt.
+
+63
+00:04:56,590 --> 00:05:04,400
+Drucke dein Kurswahlformular in Originalgröße aus, gib es rechtzeitig ab, und denk an den Kurswahlbogen im Lernraum.
+
+64
+00:05:04,750 --> 00:05:07,364
+Alle Regeln findest du noch einmal im Leitfaden.
+
+65
+00:05:07,414 --> 00:05:09,140
+Viel Erfolg bei deiner Kurswahl!
