@@ -151,11 +151,12 @@ b,strong{font-weight:700}
 .anim.present .f:not(.on){transform:translateY(calc(var(--u)*.8))}
 
 /* Animationen (Schalter unter „Angaben“) */
-.anim.present .slide.enter{animation:slin .5s cubic-bezier(.2,.7,.2,1)}
-.anim.present .slide.enter.back{animation-name:slback}
-@keyframes slin{from{opacity:0;transform:translateX(calc(var(--sw,960px) * .025))}}
-@keyframes slback{from{opacity:0;transform:translateX(calc(var(--sw,960px) * -.025))}}
-.anim .slide.enter .sl > h2,.anim .slide.enter .title-sl h1{animation:up .55s .08s cubic-bezier(.2,.7,.2,1) both}
+/* Die weiße Folie bleibt beim Wechsel stehen (kein Hell-Dunkel-Blitz); nur der Inhalt gleitet sanft herein. */
+.anim.present .slide.enter .sl > .bd{animation:slin .45s .06s cubic-bezier(.2,.7,.2,1) both}
+.anim.present .slide.enter.back .sl > .bd{animation-name:slback}
+@keyframes slin{from{opacity:0;transform:translateX(calc(var(--u)*1.2))}}
+@keyframes slback{from{opacity:0;transform:translateX(calc(var(--u)*-1.2))}}
+.anim .slide.enter .sl > h2,.anim .slide.enter .title-sl > :not(.hud):not(.kick){animation:up .45s cubic-bezier(.2,.7,.2,1) both}
 .anim .slide.enter .kick{animation:fade .5s both}
 @keyframes up{from{opacity:0;transform:translateY(calc(var(--u)*1.2))}}
 @keyframes fade{from{opacity:0}}
