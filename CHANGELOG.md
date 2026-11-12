@@ -4,6 +4,12 @@ Neue Einträge oben. Format: `## Version – Datum`, darunter Stichpunkte mit `-
 Bei jeder Änderung auf `main` die Nummer in `VERSION` erhöhen (Fehlerbehebung 1.0.1, neue Funktion 1.1.0),
 sonst merken die laufenden Installationen nichts vom Update.
 
+## 1.0.1 – 2026-11-12
+
+- Neu ab Schuljahr 2026/27: Ist ein anderes Fach des Aufgabenfelds II durchgängig, muss Geschichte zusätzlich in Q1 und Q2 belegt werden (bisher Q3 und Q4). Regelprüfung, Einbringpflicht und Assistent sind angepasst.
+- Sportbefreiung: Die Mindestzahl bleibt bei 40 Kursen (bisher 39); der Hinweis sagt, dass der Sport durch Grundkurse ersetzt wird.
+- Assistent Sport: Derselbe Kurs ist bis zu zweimal wählbar (höchstens drei Ballspiele), wie in der Regelprüfung.
+
 ## 1.0.0 – 2026-11-06
 
 - Versionsnummer auf allen Seiten; Admins sehen per Klick auf die Nummer diesen Changelog.

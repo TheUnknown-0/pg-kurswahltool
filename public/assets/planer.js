@@ -395,7 +395,7 @@ function evaluate(){
   if(geDurch && otherAf2Durch.length===0){
     ok(pw[2]&&pw[3], 'Geschichte als durchgängiges Fach: zusätzlich Politikwissenschaft in Q3 und Q4 (oder ein weiteres Fach des AF II durchgängig)', G2);
   } else if(otherAf2Durch.length>0){
-    ok(ge[2]&&ge[3], 'Zusätzlich Geschichte in Q3 und Q4', G2);
+    ok(ge[0]&&ge[1], 'Zusätzlich Geschichte in Q1 und Q2 (neu ab Schuljahr 2026/27, bisher Q3 und Q4)', G2);
   }
   SUBJECTS.filter(s=>s.twin).forEach(s=>{
     if(sems(s.id).some(Boolean) && sems(s.twin).some(Boolean)) add('error',`${S[s.twin].name}: entweder regulär oder bilingual belegen, nicht beides`,G2);
@@ -422,7 +422,7 @@ function evaluate(){
     if(triple.length) add('error',`Sportkurs höchstens zweimal wählbar (${triple.map(c=>SPORT[c]).join(', ')} ist ${times(triple[0])}-mal gewählt)`,G2);
     const dupes=chosen.filter((c,i)=>chosen.indexOf(c)!==i && times(c)===2);
     if(dupes.length) add('warn',`Sportkurs mehrfach gewählt (${[...new Set(dupes)].map(c=>SPORT[c]).join(', ')}) – nur mit abweichenden Inhalten oder höherer Leistungsstufe möglich`,G2);
-  } else add('info','Sportpraxis entfällt wegen Befreiung; die Mindestzahl sinkt auf 39 Kurse',G2);
+  } else add('info','Sportpraxis entfällt wegen Befreiung; die 40 Kurse brauchst du trotzdem, ersetze den Sport durch Grundkurse',G2);
   ZUSATZ.forEach(z=>{
     const zs=st.zusatz[z.id]||[]; const n=zs.filter(Boolean).length;
     if(n===0) return;
@@ -439,7 +439,7 @@ function evaluate(){
   const zCourses=Object.values(st.zusatz).reduce((a,arr)=>a+arr.filter(Boolean).length,0);
   const total=lkCourses+gkCourses+theo+sportCourses+zCourses;
   const hours=(lkCourses*5 + (gkCourses+theo+zCourses)*3 + sportCourses*2)/2;
-  const minK=sportOff()?39:40;
+  const minK=40; // auch bei Sportbefreiung
   ok(total>=minK, `Mindestens ${minK} Kurse belegt (aktuell ${total})`, G3);
   ok(hours>=66, `Mindestens 66 Jahreswochenstunden (aktuell ${hours})`, G3);
   ok(lkCourses===8 || !(roles.lk1&&roles.lk2), 'Beide Leistungskurse in allen vier Halbjahren (8 LK-Kurse)', G3);
@@ -456,7 +456,7 @@ function evaluate(){
   }
   const af2Pflicht=SUBJECTS.find(s=>s.af===2&&durch(s.id)); if(af2Pflicht) put4(af2Pflicht.id);
   if(geDurch && otherAf2Durch.length===0){ ['pw','pwb'].forEach(id=>{put(id,2);put(id,3);}); }
-  else if(otherAf2Durch.length>0){ ['ge','geb'].forEach(id=>{put(id,2);put(id,3);}); }
+  else if(otherAf2Durch.length>0){ ['ge','geb'].forEach(id=>{put(id,0);put(id,1);}); }
   if(!kfExempt()){
     const kfS=SUBJECTS.filter(s=>s.kf).find(s=>(sems(s.id)[0]&&sems(s.id)[1])||(sems(s.id)[2]&&sems(s.id)[3]));
     if(kfS){ if(sems(kfS.id)[0]&&sems(kfS.id)[1]){put(kfS.id,0);put(kfS.id,1);} else {put(kfS.id,2);put(kfS.id,3);} }
@@ -1874,7 +1874,7 @@ const WZ_STEPS = [
         const geD = info.geD || (pick && S[pick].ge);
         const other = ds.filter(id=>!S[id].ge);
         if(geD && other.length===0){ const pw=pwSems(); return pw[2]&&pw[3] ? null : {kind:'pw', opts:['pw','pwb']}; }
-        if(other.length>0){ const ge=geSems(); return ge[2]&&ge[3] ? null : {kind:'ge', opts:['ge','geb']}; }
+        if(other.length>0){ const ge=geSems(); return ge[0]&&ge[1] ? null : {kind:'ge', opts:['ge','geb']}; }
         return null;
       });
       return {needAf, choices, sup, ask:needAf||!!sup(null)};
@@ -1884,7 +1884,7 @@ const WZ_STEPS = [
       (p.needAf?p.choices:[null]).forEach(af=>{ const s=p.sup(af); (s?s.opts:[null]).forEach(sup=>out.push({af,sup})); });
       return out;
     },
-    hint:(d,p)=>p.needAf ? 'Ein Fach des gesellschaftswissenschaftlichen Aufgabenfelds musst du in allen vier Halbjahren belegen.' : 'Zu deinem durchgängigen Fach gehört noch eine Pflichtbelegung in Q3 und Q4.',
+    hint:(d,p)=>p.needAf ? 'Ein Fach des gesellschaftswissenschaftlichen Aufgabenfelds musst du in allen vier Halbjahren belegen.' : 'Zu deinem durchgängigen Fach gehört noch eine Pflichtbelegung: Politikwissenschaft in Q3 und Q4 oder Geschichte in Q1 und Q2.',
     init:()=>({af:null, sup:null}),
     valid:(p,a,d)=>{ const af=p.needAf?a.af:null; const s=p.sup(af); const sup=s?(s.opts.includes(a.sup)?a.sup:s.opts[0]):null; return wzAllowedCached('af2',d,p).some(x=>x.af===af && x.sup===sup); },
     apply:(d,p,a={})=>{
@@ -1892,7 +1892,7 @@ const WZ_STEPS = [
       const s=p.sup(p.needAf?a.af:null);
       withState(d,()=>{
         if(p.needAf && a.af) st.sem[a.af]=ALL4();
-        if(s){ const id=s.opts.includes(a.sup)?a.sup:s.opts[0]; setBlock(id,1); }
+        if(s){ const id=s.opts.includes(a.sup)?a.sup:s.opts[0]; setBlock(id, s.kind==='ge' ? 0 : 1); }
       });
     },
     render:(el,d,p,a,set)=>{
@@ -1910,7 +1910,7 @@ const WZ_STEPS = [
         const sups=s.opts.filter(id=>al.some(x=>x.af===af && x.sup===id));
         const cur=s.opts.includes(a.sup)?a.sup:s.opts[0];
         if(sups.length && !sups.includes(cur)){ set({...a,sup:sups[0]}); return; }
-        wzQ(el, s.kind==='pw' ? 'Geschichte ist dein durchgängiges Fach: Du belegst zusätzlich Politikwissenschaft in Q3 und Q4.' : 'Zusätzlich belegst du Geschichte in Q3 und Q4.');
+        wzQ(el, s.kind==='pw' ? 'Geschichte ist dein durchgängiges Fach: Du belegst zusätzlich Politikwissenschaft in Q3 und Q4.' : 'Zusätzlich belegst du Geschichte in Q1 und Q2 (neu ab Schuljahr 2026/27).');
         el.appendChild(wzCards(sups.map(id=>({v:id,label:S[id].name,hint:S[id].twin?'für den bilingualen Zug':'regulärer Kurs'})), cur, sup=>set({...a,sup})));
       }
     }},
@@ -1937,7 +1937,7 @@ const WZ_STEPS = [
 
   {id:'sport', title:'Sportkurse',
     plan:d=>withState(d,()=>({ask:!sportOff(), ruder:st.meta.ruderAg, theo:sportRole()})),
-    hint:(d,p)=>'In jedem Halbjahr ein Praxiskurs, jeder Kurs nur einmal und höchstens drei Ballspiele. Ob ein Kurs stattfindet, hängt von den Wahlen ab.'+(p.theo?' Weil Sport Prüfungsfach ist, sind die zwei Kurse Sporttheorie in Q3 und Q4 schon eingetragen.':''),
+    hint:(d,p)=>'In jedem Halbjahr ein Praxiskurs, höchstens drei Ballspiele und derselbe Kurs höchstens zweimal (das zweite Mal nur mit anderen Inhalten oder höherer Leistungsstufe). Ob ein Kurs stattfindet, hängt von den Wahlen ab.'+(p.theo?' Weil Sport Prüfungsfach ist, sind die zwei Kurse Sporttheorie in Q3 und Q4 schon eingetragen.':''),
     init:()=>[...st.sport],
     valid:(p,a)=>a.every((c,i)=>c && wzSportOpts(p,a,i).includes(c)),
     apply:(d,p,a)=>{ if(!a) return; d.sport=a.map((c,i)=>c && wzSportOpts(p,a,i).includes(c) ? c : null); },
@@ -1957,7 +1957,7 @@ const WZ_STEPS = [
 
   {id:'extra', title:'Kurse auffüllen',
     plan:()=>({ask:true}),
-    hint:()=>'Der Planer schlägt weitere Grundkurse vor, bis du mindestens 40 Kurse (bei Sportbefreiung 39) und 66 Jahreswochenstunden erreichst. Zuerst ergänzt er Fächer, die du schon ein Jahr belegst, danach weitere Fächer in der Reihenfolge der Fächerliste – das ist keine inhaltliche Empfehlung. Tausche frei aus.',
+    hint:()=>'Der Planer schlägt weitere Grundkurse vor, bis du mindestens 40 Kurse (auch bei Sportbefreiung) und 66 Jahreswochenstunden erreichst. Zuerst ergänzt er Fächer, die du schon ein Jahr belegst, danach weitere Fächer in der Reihenfolge der Fächerliste – das ist keine inhaltliche Empfehlung. Tausche frei aus.',
     init:d=>wzSuggest(d),
     valid:()=>true,
     apply:(d,p,a)=>{ (a||[]).forEach(k=>wzApplyKey(d,k)); },
@@ -2033,7 +2033,7 @@ const WZ_STEPS = [
 ];
 function wzSportOpts(p, a, i){
   const others=a.filter((x,j)=>j!==i && x);
-  return SPORT_BY_SEM[i].filter(c=>(c!=='G2'||p.ruder) && !others.includes(c) && !(c[0]==='B' && others.filter(x=>x[0]==='B').length>=3));
+  return SPORT_BY_SEM[i].filter(c=>(c!=='G2'||p.ruder) && others.filter(x=>x===c).length<2 && !(c[0]==='B' && others.filter(x=>x[0]==='B').length>=3));
 }
 
 /* ---- Ablauf ---- */
