@@ -2,7 +2,7 @@
 
 Eigenständige Hilfeseite zur Kurswahl der Qualifikationsphase, vorerst getrennt vom Kurswahl-Planer
 (nicht im Tool verlinkt). Die Regeln entsprechen der Prüfung im Planer (`public/assets/planer.js`,
-VO-GO Berlin §§ 23, 25, 26), mit zwei Neuerungen ab dem Schuljahr 2026/27, die der Planer noch nicht prüft:
+VO-GO Berlin §§ 23, 25, 26), inklusive der Neuerungen ab dem Schuljahr 2026/27 (Planer ab Version 1.0.1):
 Die zusätzliche Geschichte liegt in Q1+Q2 (bisher Q3+Q4), und auch mit Sportbefreiung sind mindestens 40 Kurse
 Pflicht (bisher 39). Inoffiziell: Verbindlich sind die Vorgaben der Schule und die Beratung durch den Päko.
 
