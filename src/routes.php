@@ -6,6 +6,7 @@ use App\Controllers\AccountController;
 use App\Controllers\AdminController;
 use App\Controllers\AuthController;
 use App\Controllers\HealthController;
+use App\Controllers\HilfeController;
 use App\Controllers\JahrgaengeController;
 use App\Controllers\PlanerController;
 use App\Controllers\StatistikController;
@@ -14,6 +15,9 @@ use App\Core\Router;
 return static function (Router $r): void {
     $r->get('/healthz', [HealthController::class, 'healthz']);
     $r->get('/readyz', [HealthController::class, 'readyz']);
+
+    // Hilfe zur Kurswahl (Leitfaden und Erklärvideo), ohne Anmeldung
+    $r->get('/hilfe', [HilfeController::class, 'index']);
 
     $r->get('/login', [AuthController::class, 'form']);
     $r->post('/login', [AuthController::class, 'login']);

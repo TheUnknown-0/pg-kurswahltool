@@ -45,6 +45,7 @@ header.hero{padding:40px 0 0}
 .check-list li:before{content:'✓';position:absolute;left:0;color:var(--blue2);font-weight:900}
 .text-link{color:var(--blue);font-weight:750;text-decoration:none}
 .text-link:hover{text-decoration:underline}
+.help-link{display:block;margin-top:10px}
 @media (max-width:800px){.hero-card{grid-template-columns:1fr;gap:24px}.top{align-items:flex-start}.logo{width:145px}header.hero{padding-top:22px}}
 
 /* ---------- Abschnitte ---------- */

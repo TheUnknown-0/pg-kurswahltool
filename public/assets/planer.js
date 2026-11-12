@@ -27,6 +27,12 @@ const AF_NAMES = {1:'Aufgabenfeld I – sprachlich-literarisch-künstlerisch',2:
 const ROLES = [['lk1','1. LK'],['lk2','2. LK'],['pf3','3. PF'],['pf4','4. PF'],['pk5','5. PK']];
 const ROLE_LABEL = Object.fromEntries(ROLES);
 const SCHULJAHRE = ['2026/27','2027/28']; // Q1/Q2 und Q3/Q4 – bei jeder Kurswahl anpassen
+// Zusätzliche Geschichte (anderes AF-II-Fach durchgängig): § 25 Abs. 3 VO-GO verlangt die Kurse 1 und 2,
+// § 49 Abs. 11 lässt für das Abitur bis 2027/28 noch die alte Fassung (Kurse 3 und 4) gelten.
+// Maßgeblich ist der Jahrgang „Abitur JJJJ/JJ“; ohne Angabe gilt der Jahrgang aus SCHULJAHRE.
+const abiJahr = () => { const m=/^Abitur (\d{4})\/\d{2}/.exec((st.jahrgang||'').trim()); return m ? +m[1] : parseInt(SCHULJAHRE[1],10); };
+const geNeu = () => abiJahr() >= 2028;
+const geQ = () => geNeu() ? [0,1] : [2,3];
 const LANG_OPTS = [['none','nicht belegt'],['early','ab Klasse 5–7'],['mid','ab Klasse 8–9'],['new','neu ab Klasse 10']];
 // Eingabe „seit Klasse“ → Stufe für die Regeln: bis Kl. 7 = early, Kl. 8–9 = mid, Kl. 10 = neu begonnen
 const parseKl = v => { const n=Number(v); return Number.isInteger(n) && n>=1 && n<=10 ? n : null; };
@@ -388,14 +394,14 @@ function evaluate(){
   }
 
   const af2Durch=SUBJECTS.filter(s=>s.af===2&&durch(s.id));
-  const ge=geSems(), pw=pwSems();
+  const ge=geSems(), pw=pwSems(), gq=geQ();
   const geDurch=ge.every(Boolean), pwDurch=pw.every(Boolean);
   const otherAf2Durch=SUBJECTS.filter(s=>s.af===2&&!s.ge&&durch(s.id));
   ok(af2Durch.length>0||geDurch, 'Ein Fach des Aufgabenfelds II durchgängig', G2);
   if(geDurch && otherAf2Durch.length===0){
     ok(pw[2]&&pw[3], 'Geschichte als durchgängiges Fach: zusätzlich Politikwissenschaft in Q3 und Q4 (oder ein weiteres Fach des AF II durchgängig)', G2);
   } else if(otherAf2Durch.length>0){
-    ok(ge[0]&&ge[1], 'Zusätzlich Geschichte in Q1 und Q2 (neu ab Schuljahr 2026/27, bisher Q3 und Q4)', G2);
+    ok(ge[gq[0]]&&ge[gq[1]], geNeu() ? 'Zusätzlich Geschichte in Q1 und Q2 (§ 25 Abs. 3 VO-GO, gilt ab Abitur 2028/29)' : 'Zusätzlich Geschichte in Q3 und Q4', G2);
   }
   SUBJECTS.filter(s=>s.twin).forEach(s=>{
     if(sems(s.id).some(Boolean) && sems(s.twin).some(Boolean)) add('error',`${S[s.twin].name}: entweder regulär oder bilingual belegen, nicht beides`,G2);
@@ -416,6 +422,8 @@ function evaluate(){
     const balls=chosen.filter(c=>c[0]==='B').length;
     if(chosen.length>0) ok(balls<=3, 'Höchstens drei Ballspiel-Kurse (B1–B12)', G2);
     if(chosen.length===4) ok(balls<4, 'Mindestens ein Sportkurs aus einem anderen Bewegungsfeld als Ballspiele', G2);
+    const nonBall=st.sport.map((c,i)=>c&&c[0]!=='B'?i:-1).filter(i=>i>=0);
+    if(chosen.length===4 && nonBall.length===1 && nonBall[0]===3) add('warn','Dein einziger Sportkurs außerhalb der Ballspiele liegt in Q4. Fällt er aus, bleiben nur Ballspiele: lege ihn besser in Q1 bis Q3',G2);
     if(chosen.includes('G2')&&!st.meta.ruderAg) add('error','Rudern setzt mindestens ein Jahr Ruder-AG voraus',G2);
     const times=c=>chosen.filter(x=>x===c).length;
     const triple=[...new Set(chosen)].filter(c=>times(c)>=3);
@@ -456,7 +464,7 @@ function evaluate(){
   }
   const af2Pflicht=SUBJECTS.find(s=>s.af===2&&durch(s.id)); if(af2Pflicht) put4(af2Pflicht.id);
   if(geDurch && otherAf2Durch.length===0){ ['pw','pwb'].forEach(id=>{put(id,2);put(id,3);}); }
-  else if(otherAf2Durch.length>0){ ['ge','geb'].forEach(id=>{put(id,0);put(id,1);}); }
+  else if(otherAf2Durch.length>0){ ['ge','geb'].forEach(id=>{put(id,gq[0]);put(id,gq[1]);}); }
   if(!kfExempt()){
     const kfS=SUBJECTS.filter(s=>s.kf).find(s=>(sems(s.id)[0]&&sems(s.id)[1])||(sems(s.id)[2]&&sems(s.id)[3]));
     if(kfS){ if(sems(kfS.id)[0]&&sems(kfS.id)[1]){put(kfS.id,0);put(kfS.id,1);} else {put(kfS.id,2);put(kfS.id,3);} }
@@ -1874,7 +1882,7 @@ const WZ_STEPS = [
         const geD = info.geD || (pick && S[pick].ge);
         const other = ds.filter(id=>!S[id].ge);
         if(geD && other.length===0){ const pw=pwSems(); return pw[2]&&pw[3] ? null : {kind:'pw', opts:['pw','pwb']}; }
-        if(other.length>0){ const ge=geSems(); return ge[0]&&ge[1] ? null : {kind:'ge', opts:['ge','geb']}; }
+        if(other.length>0){ const ge=geSems(), q=geQ(); return ge[q[0]]&&ge[q[1]] ? null : {kind:'ge', opts:['ge','geb']}; }
         return null;
       });
       return {needAf, choices, sup, ask:needAf||!!sup(null)};
@@ -1884,7 +1892,7 @@ const WZ_STEPS = [
       (p.needAf?p.choices:[null]).forEach(af=>{ const s=p.sup(af); (s?s.opts:[null]).forEach(sup=>out.push({af,sup})); });
       return out;
     },
-    hint:(d,p)=>p.needAf ? 'Ein Fach des gesellschaftswissenschaftlichen Aufgabenfelds musst du in allen vier Halbjahren belegen.' : 'Zu deinem durchgängigen Fach gehört noch eine Pflichtbelegung: Politikwissenschaft in Q3 und Q4 oder Geschichte in Q1 und Q2.',
+    hint:(d,p)=>p.needAf ? 'Ein Fach des gesellschaftswissenschaftlichen Aufgabenfelds musst du in allen vier Halbjahren belegen.' : 'Zu deinem durchgängigen Fach gehört noch eine Pflichtbelegung: Politikwissenschaft in Q3 und Q4 oder Geschichte ('+(withState(d,geNeu)?'Q1 und Q2, gilt ab Abitur 2028/29':'Q3 und Q4')+').',
     init:()=>({af:null, sup:null}),
     valid:(p,a,d)=>{ const af=p.needAf?a.af:null; const s=p.sup(af); const sup=s?(s.opts.includes(a.sup)?a.sup:s.opts[0]):null; return wzAllowedCached('af2',d,p).some(x=>x.af===af && x.sup===sup); },
     apply:(d,p,a={})=>{
@@ -1892,7 +1900,7 @@ const WZ_STEPS = [
       const s=p.sup(p.needAf?a.af:null);
       withState(d,()=>{
         if(p.needAf && a.af) st.sem[a.af]=ALL4();
-        if(s){ const id=s.opts.includes(a.sup)?a.sup:s.opts[0]; setBlock(id, s.kind==='ge' ? 0 : 1); }
+        if(s){ const id=s.opts.includes(a.sup)?a.sup:s.opts[0]; setBlock(id, s.kind==='ge' && geNeu() ? 0 : 1); }
       });
     },
     render:(el,d,p,a,set)=>{
@@ -1910,7 +1918,7 @@ const WZ_STEPS = [
         const sups=s.opts.filter(id=>al.some(x=>x.af===af && x.sup===id));
         const cur=s.opts.includes(a.sup)?a.sup:s.opts[0];
         if(sups.length && !sups.includes(cur)){ set({...a,sup:sups[0]}); return; }
-        wzQ(el, s.kind==='pw' ? 'Geschichte ist dein durchgängiges Fach: Du belegst zusätzlich Politikwissenschaft in Q3 und Q4.' : 'Zusätzlich belegst du Geschichte in Q1 und Q2 (neu ab Schuljahr 2026/27).');
+        wzQ(el, s.kind==='pw' ? 'Geschichte ist dein durchgängiges Fach: Du belegst zusätzlich Politikwissenschaft in Q3 und Q4.' : (withState(d,geNeu) ? 'Zusätzlich belegst du Geschichte in Q1 und Q2 (gilt ab Abitur 2028/29).' : 'Zusätzlich belegst du Geschichte in Q3 und Q4.'));
         el.appendChild(wzCards(sups.map(id=>({v:id,label:S[id].name,hint:S[id].twin?'für den bilingualen Zug':'regulärer Kurs'})), cur, sup=>set({...a,sup})));
       }
     }},
@@ -1937,7 +1945,7 @@ const WZ_STEPS = [
 
   {id:'sport', title:'Sportkurse',
     plan:d=>withState(d,()=>({ask:!sportOff(), ruder:st.meta.ruderAg, theo:sportRole()})),
-    hint:(d,p)=>'In jedem Halbjahr ein Praxiskurs, höchstens drei Ballspiele und derselbe Kurs höchstens zweimal (das zweite Mal nur mit anderen Inhalten oder höherer Leistungsstufe). Ob ein Kurs stattfindet, hängt von den Wahlen ab.'+(p.theo?' Weil Sport Prüfungsfach ist, sind die zwei Kurse Sporttheorie in Q3 und Q4 schon eingetragen.':''),
+    hint:(d,p)=>'In jedem Halbjahr ein Praxiskurs, höchstens drei Ballspiele und derselbe Kurs höchstens zweimal (das zweite Mal nur mit anderen Inhalten oder höherer Leistungsstufe). Lege den Kurs außerhalb der Ballspiele in Q1 bis Q3, damit er nicht am Ende ausfällt. Ob ein Kurs stattfindet, hängt von den Wahlen ab.'+(p.theo?' Weil Sport Prüfungsfach ist, sind die zwei Kurse Sporttheorie in Q3 und Q4 schon eingetragen.':''),
     init:()=>[...st.sport],
     valid:(p,a)=>a.every((c,i)=>c && wzSportOpts(p,a,i).includes(c)),
     apply:(d,p,a)=>{ if(!a) return; d.sport=a.map((c,i)=>c && wzSportOpts(p,a,i).includes(c) ? c : null); },
@@ -2040,7 +2048,7 @@ function wzSportOpts(p, a, i){
 let wz=null; // {ans, hist, cur}
 // Baut den Entwurf aus allen Antworten vor Schritt upto und liefert den Plan des Schritts upto
 function wzBuild(upto){
-  const d=blankState();
+  const d=blankState(); d.jahrgang=st.jahrgang;
   withState(d, normalize);
   for(let i=0;i<upto && i<WZ_STEPS.length;i++){
     const step=WZ_STEPS[i], p=step.plan(d);

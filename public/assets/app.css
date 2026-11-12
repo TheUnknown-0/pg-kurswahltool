@@ -46,6 +46,8 @@ input[type=file]{max-width:100%}
 .msg.warn{background:var(--orange-soft);color:var(--orange)}
 
 .login{max-width:440px;margin:0 auto}
+.help-hint{margin:18px 0 0;font-size:.92rem}
+.help-hint a{color:var(--blue);font-weight:650}
 .login .btn{width:100%;margin-top:22px}
 
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}

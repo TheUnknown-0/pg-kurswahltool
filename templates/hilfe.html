@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hilfe zur Kurswahl – Kurswahl-Planer</title>
+<style>
+/* Layout: im Design des Kurswahl-Planers (helle Fläche, weiße Karten mit weichem Schatten, Navy als Leitfarbe).
+   Bewusst nur hell wie das Tool selbst. Leitmotiv: Fächer als Linien über die Halbjahre Q1 bis Q4. */
+:root{
+  color-scheme:light;
+  --blue:#153d6f; --blue2:#235a96; --blue3:#4f84c4; --head:#142f50;
+  --bg:#f1f4f8; --paper:#ffffff; --paper-2:#f5f7fa; --paper-3:#e8edf3;
+  --ink:#1c2733; --ink-2:#5d6877; --ink-3:#8793a2;
+  --line:#d7dee8; --line-strong:#b9c4d2;
+  --blue-soft:#edf5ff; --blue-tint:#e7eff8;
+  --bll:#365d44; --bll-soft:#edf6f0; --bll-line:#c8d9cd;
+  --orange:#764500; --orange-soft:#fff2d9; --orange-line:#b66a00;
+  --red:#a52424; --red-soft:#fae7e7;
+  --green:#226038; --green-soft:#dff2e5;
+  --grey:#8793a2;
+  --shadow:0 8px 28px #19365316;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:0 72px}
+h1,h2,h3{color:var(--head);line-height:1.2;margin:0;text-wrap:balance}
+p{margin:0}
+a{color:var(--blue)}
+:focus-visible{outline:3px solid #2b70b96b;outline-offset:2px;border-radius:4px}
+.wrap{max-width:1050px;margin:0 auto}
+.eyebrow{display:inline-block;color:var(--blue2);font-size:.82rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+
+/* Rollen-Chip wie im Planer */
+.rchip{display:inline-block;border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:6px;padding:2px 8px;font-size:.76rem;font-weight:650;line-height:1.35;white-space:nowrap}
+.rchip.pf{background:var(--blue3);border-color:var(--blue3)}
+.rchip.pk{background:var(--bll);border-color:var(--bll)}
+.rchip.sp{background:var(--orange-line);border-color:var(--orange-line)}
+.rchip.gk{background:#fff;border-color:var(--line-strong);color:#40546b}
+.rchip.zk{background:var(--paper-3);border-color:var(--line-strong);color:#40546b}
+
+/* ---------- Kopf ---------- */
+.top{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-block:36px 26px;flex-wrap:wrap}
+.top h1{font-size:clamp(1.65rem,4vw,2.25rem);margin-bottom:5px}
+.subtitle{color:var(--ink-2)}
+.top a.tag{text-decoration:none;color:var(--blue);font-weight:650}
+.top .tag{font-size:.85rem;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 14px}
+
+.card{background:var(--paper);border-radius:12px;box-shadow:var(--shadow)}
+.hero-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(24px,4vw,40px);align-items:center;padding:clamp(24px,5vw,46px);border-top:5px solid var(--blue);background:linear-gradient(135deg,#fff 0%,#f7faff 68%,#edf4fc 100%)}
+.hero-copy h2{margin:12px 0 14px;font-size:clamp(1.9rem,4.4vw,2.8rem)}
+.hero-copy>p{color:#49596a;font-size:1.06rem;max-width:56ch}
+.hero-copy .disclaimer{margin-top:16px;font-size:.88rem;color:var(--ink-3);max-width:56ch}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}
+.fact{background:var(--paper);border:1px solid #cbd8e7;border-radius:10px;padding:10px 12px;display:grid;gap:2px}
+.fact b{font-size:1.6rem;font-weight:850;color:var(--blue);font-variant-numeric:tabular-nums;line-height:1.1}
+.fact span{font-size:.8rem;color:var(--ink-2);line-height:1.3}
+
+.map{margin:0;padding:18px 18px 10px;border:1px solid #cbd8e7;border-radius:10px;background:#fff;box-shadow:0 8px 22px #19365310;min-width:0}
+.map-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.map-head h3{font-size:1.05rem}
+.map-head span{font-size:.8rem;font-weight:650;color:var(--green);background:var(--green-soft);border-radius:999px;padding:2px 10px}
+.map-scroll{overflow-x:auto}
+.map svg{display:block;width:100%;min-width:440px;height:auto}
+.ln{fill:none;stroke-width:8;stroke-linecap:round}
+.st{fill:#fff;stroke:var(--blue);stroke-width:2.6;transform-box:fill-box;transform-origin:center}
+@media (prefers-reduced-motion: no-preference){
+  .ln{stroke-dasharray:1;stroke-dashoffset:1;animation:draw .9s cubic-bezier(.6,.05,.2,1) forwards;animation-delay:calc(var(--i) * 80ms + 200ms)}
+  .st{animation:pop .3s ease-out backwards;animation-delay:calc(var(--i) * 80ms + 650ms)}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes pop{from{transform:scale(0)}}
+}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.toc a{display:inline-flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:999px;background:var(--paper);box-shadow:0 2px 8px #19365312;color:var(--ink);text-decoration:none;font-size:.9rem;font-weight:600}
+.toc a:hover{color:var(--blue)}
+.toc a i{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:.75rem;font-weight:850;background:var(--blue-tint);color:var(--blue)}
+
+/* ---------- Blöcke wie im Planer ---------- */
+main{margin-top:clamp(28px,5vw,44px);display:grid;gap:clamp(22px,3vw,32px)}
+section.block{background:var(--paper);border-radius:12px;box-shadow:var(--shadow);scroll-margin-top:16px}
+.block-head{padding:clamp(24px,4vw,36px) clamp(20px,4vw,38px) 8px}
+.num{display:grid;place-items:center;width:42px;height:42px;margin-bottom:16px;border-radius:50%;background:var(--blue-tint);color:var(--blue);font-weight:850;font-size:.95rem}
+.block-head h2{font-size:1.3rem;margin-bottom:8px}
+.block-head .hint{color:var(--ink-2);max-width:70ch;line-height:1.6}
+.block-body{padding:12px clamp(20px,4vw,38px) clamp(24px,4vw,36px)}
+@media (max-width:560px){.block-body{padding-left:14px;padding-right:14px}}
+
+/* Route */
+.route{list-style:none;margin:0;padding:0;position:relative;counter-reset:s}
+.route::before{content:"";position:absolute;left:19px;top:22px;bottom:22px;width:4px;border-radius:2px;background:var(--blue-tint)}
+.route li{counter-increment:s;position:relative;display:grid;grid-template-columns:42px minmax(0,.9fr) minmax(0,1.5fr);gap:4px 20px;padding-block:12px;align-items:start}
+.route li::before{content:counter(s);width:42px;height:42px;border-radius:50%;background:var(--blue-tint);color:var(--blue);display:grid;place-items:center;font-weight:850;font-size:.95rem;position:relative;z-index:1;box-shadow:0 0 0 4px var(--paper)}
+.route li h3{font-size:1.02rem;font-weight:750;padding-top:10px}
+.route li p{color:var(--ink-2);padding-top:9px;font-size:.96rem}
+.route li.goal::before{content:"✓";background:var(--green);color:#fff}
+.route li.goal h3{color:var(--green)}
+.route li + li{border-top:1px solid var(--line)}
+
+/* Begriffe */
+.terms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0}
+.terms div{background:var(--paper-2);border-radius:10px;padding:14px 16px;display:grid;gap:4px;align-content:start}
+.terms dt{font-weight:750;color:var(--head);display:flex;align-items:center;gap:8px}
+.terms dd{margin:0;color:var(--ink-2);font-size:.92rem}
+
+/* Fächertabelle wie im Planer */
+.af+.af{margin-top:24px}
+.af-title{padding:0 0 8px;border-bottom:2px solid var(--blue)}
+.af-title h3{font-size:1rem;font-weight:750}
+.colhead,.frow{display:grid;grid-template-columns:minmax(150px,1.3fr) repeat(4,62px) minmax(0,1.6fr);gap:6px;align-items:center;padding:8px 10px}
+.colhead{color:var(--ink-2);font-size:.78rem;font-weight:700;background:var(--paper-2)}
+.colhead>span:nth-child(n+2):nth-child(-n+5){text-align:center}
+.frow{border-bottom:1px solid var(--line)}
+.frow b{font-weight:650}
+.frow small{color:var(--ink-2);font-size:.82rem;line-height:1.35}
+.qbox{width:32px;height:32px;margin:0 auto;border:1.5px solid var(--line-strong);border-radius:7px;background:#fff;display:grid;place-items:center}
+.qbox svg{width:18px;height:18px;fill:none;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+.qbox.y{border-color:var(--blue)}
+.qbox.y svg{stroke:var(--blue)}
+.qbox.n{background:var(--paper-2);border-color:var(--line)}
+.qbox.p{border-color:var(--orange-line);background:var(--orange-soft);color:var(--orange);font-weight:900}
+.key{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:.85rem;color:var(--ink-2)}
+.key span{display:inline-flex;align-items:center;gap:8px}
+.key .qbox{width:24px;height:24px;margin:0}
+.key .qbox svg{width:14px;height:14px}
+@media (max-width:720px){
+  .colhead{display:none}
+  .frow{grid-template-columns:repeat(4,1fr);grid-template-areas:"s s s s" ". . . ." "n n n n"}
+  .frow b{grid-area:s}.frow small{grid-area:n}
+  .frow .qbox::after{content:attr(data-l);position:absolute;transform:translateY(26px);font-size:10px;color:var(--ink-3);white-space:nowrap}
+  .frow .qbox{position:relative;margin-bottom:12px}
+}
+
+/* Regel-Kästen */
+.panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.panel{border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:grid;gap:12px;align-content:start;min-width:0}
+.panel.lk{border-top:4px solid var(--blue)}
+.panel.pf{border-top:4px solid var(--blue3)}
+.panel.pk{border-top:4px solid var(--bll)}
+.panel.sp{border-top:4px solid var(--orange-line)}
+.panel.zk{border-top:4px solid var(--grey)}
+.panel h3{font-size:1.05rem;display:flex;align-items:center;gap:10px}
+.check-list{margin:0;padding:0;list-style:none;display:grid;gap:9px}
+.check-list li{position:relative;padding-left:26px;font-size:.95rem}
+.check-list li::before{content:'✓';position:absolute;left:0;color:var(--blue2);font-weight:900}
+.check-list small{display:block;color:var(--ink-3);font-size:.86rem}
+
+/* Belegpflichten */
+.duty{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.duty-row{display:grid;grid-template-columns:minmax(0,1fr) 210px minmax(0,1.35fr);gap:16px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.duty-row:first-child{border-top:0}
+.duty-row.head{background:var(--paper-2);color:var(--ink-2);font-size:.78rem;font-weight:700;padding-block:8px}
+.duty-row.head .qs{display:grid;grid-template-columns:repeat(4,1fr);text-align:center}
+.duty-row b{font-weight:650}
+.duty-row small{color:var(--ink-2);font-size:.88rem}
+.duty svg{width:210px;height:26px;display:block}
+
+/* Rechner */
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+.ticket{border:1px solid #cbd8e7;border-radius:12px;background:#fff;box-shadow:0 8px 22px #19365310;overflow:hidden}
+.ticket-part{padding:18px 20px;display:grid;gap:14px}
+.ticket-part + .ticket-part{border-top:2px dashed var(--line-strong);position:relative;background:linear-gradient(135deg,#fff 0%,#f7faff 70%,#edf4fc 100%)}
+.ticket-part + .ticket-part::before,.ticket-part + .ticket-part::after{content:"";position:absolute;top:-12px;width:22px;height:22px;border-radius:50%;background:var(--paper);border:1px solid #cbd8e7}
+.ticket-part + .ticket-part::before{left:-12px}
+.ticket-part + .ticket-part::after{right:-12px}
+.ticket-title{display:flex;justify-content:space-between;gap:10px;font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--blue2)}
+.ticket-title span:last-child{color:var(--ink-3);font-weight:600;letter-spacing:0;text-transform:none}
+.formula{font-size:.92rem;font-weight:650;background:var(--blue-soft);color:var(--blue);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:nowrap}
+.inputs{display:grid;gap:12px}
+.inputs label{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:12px;align-items:center}
+.inputs label span{font-weight:650}
+.inputs label small{display:block;font-weight:400;color:var(--ink-3);font-size:.84rem}
+.inputs input{width:100%;border:1px solid var(--line-strong);border-radius:7px;padding:9px 10px;background:#fff;color:var(--ink);font:inherit;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.inputs input:focus{outline:3px solid #2b70b92d;border-color:var(--blue2)}
+.stamp{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 16px;align-items:center}
+.stamp b{grid-row:span 2;font-size:2.6rem;font-weight:850;color:var(--blue);line-height:1;font-variant-numeric:tabular-nums;min-width:2.2ch;text-align:right}
+.stamp .lbl{font-weight:650}
+.st8{justify-self:start;font-size:.8rem;font-weight:700;padding:2px 10px;border-radius:999px}
+.st8.ok{background:var(--green-soft);color:var(--green)}
+.st8.bad{background:var(--red-soft);color:var(--red)}
+.side-note{display:grid;gap:12px;color:var(--ink-2);font-size:.96rem}
+.side-note b{color:var(--ink)}
+
+/* Beispiel */
+.halves{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.half{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px;background:var(--paper-2)}
+.half .q{font-weight:850;color:var(--blue);font-size:1.1rem}
+.half .bars{display:grid;gap:3px}
+.half .bars i{height:8px;border-radius:4px;background:var(--c)}
+.half .sum{font-size:.8rem;color:var(--ink-2);font-weight:600}
+.why{margin-top:16px}
+
+/* Sport */
+.sports{display:flex;flex-wrap:wrap;gap:6px}
+.neu{display:inline-block;background:var(--red);color:#fff;border-radius:5px;padding:0 6px;margin-right:6px;font-size:.74rem;font-weight:750;line-height:1.5;white-space:nowrap}
+.sport-ex{display:grid;gap:8px;margin:14px 0 4px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.sx{display:grid;grid-template-columns:7.6em auto minmax(0,1fr);gap:6px 12px;align-items:center;font-size:.88rem}
+.sx .v{font-weight:750}.sx.ok .v{color:var(--green)}.sx.bad .v{color:var(--red)}
+.sx .cs{display:flex;gap:4px}.sx .cs .rchip{min-width:2.6em;text-align:center}
+.sx.bad .cs .x{outline:2px solid var(--red);outline-offset:1px}
+.sx small{color:var(--ink-2);font-size:.84rem}
+.zk-note{margin:12px 0 4px;padding:10px 14px;border-left:4px solid var(--blue);border-radius:8px;background:var(--blue-soft);font-size:.92rem}
+.sports span{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 3px;border-radius:7px;background:var(--paper-2);border:1px solid var(--line);font-size:.86rem}
+.sports .rchip{font-size:.72rem;min-width:2.7em;text-align:center}
+
+/* Stolperfallen wie Hinweise im Planer */
+.alerts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.alert{background:var(--orange-soft);border-left:4px solid var(--orange-line);border-radius:8px;padding:12px 16px;display:grid;gap:3px}
+.alert b{color:var(--orange)}
+.alert span{color:#5b4a2f;font-size:.93rem}
+
+/* Checkliste */
+.checks{display:grid;gap:2px}
+.checks label{display:grid;grid-template-columns:24px minmax(0,1fr);gap:12px;align-items:start;padding:9px 10px;border-radius:8px;cursor:pointer}
+.checks label:hover{background:var(--blue-soft)}
+.checks input{width:18px;height:18px;margin:3px 0 0;accent-color:var(--blue)}
+.checks input:checked + span{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--line-strong)}
+.check-foot{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.meter{flex:1 1 240px;display:grid;gap:6px}
+.meter-bar{height:10px;border-radius:5px;background:var(--paper-3);overflow:hidden}
+.meter-bar i{display:block;height:100%;width:0;background:var(--green);transition:width .3s}
+.meter span{font-size:.85rem;color:var(--ink-2);font-weight:600}
+.btn{font:inherit;font-weight:650;font-size:.92rem;background:#e8edf3;color:#253649;border:0;border-radius:7px;padding:9px 14px;cursor:pointer}
+.btn:hover{background:var(--blue);color:#fff}
+
+/* Erklärvideo */
+.num.play{background:var(--blue);color:#fff}
+.num.play svg{width:16px;height:16px;margin-left:3px;fill:currentColor}
+.video-wrap{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:20px;align-items:start}
+.video-frame{border-radius:10px;overflow:hidden;background:var(--head);box-shadow:0 8px 22px #19365318;aspect-ratio:16/9;max-width:100%}
+.video-frame video{display:block;width:100%;height:100%;background:var(--head)}
+.chapters{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.chapters button{width:100%;display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;align-items:center;text-align:left;font:inherit;font-size:.92rem;color:var(--ink);background:none;border:0;border-radius:8px;padding:7px 10px;cursor:pointer}
+.chapters button:hover{background:var(--blue-soft)}
+.chapters button.on{background:var(--blue-tint);color:var(--blue);font-weight:700}
+.chapters time{font-size:.8rem;font-weight:700;color:var(--blue2);font-variant-numeric:tabular-nums}
+.video-note{margin-top:12px;font-size:.85rem;color:var(--ink-3);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.video-note span{background:var(--paper-2);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+@media (max-width:860px){.video-wrap{grid-template-columns:minmax(0,1fr)}.chapters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.chapters{grid-template-columns:minmax(0,1fr)}}
+
+footer{margin-top:36px;color:var(--ink-3);font-size:.88rem;display:grid;gap:6px;max-width:84ch}
+
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important}}
+@media (max-width:860px){
+  .hero-card,.calc,.panels{grid-template-columns:minmax(0,1fr)}
+  .terms,.alerts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .route li{grid-template-columns:42px minmax(0,1fr)}
+  .route li p{grid-column:2;padding-top:0}
+  .duty-row{grid-template-columns:minmax(0,1fr) 190px}
+  .duty-row small{grid-column:1 / -1}
+  .sx{grid-template-columns:minmax(0,1fr)}
+  .duty svg{width:190px}
+  .duty-row.head > :last-child{display:none}
+  .halves{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:540px){
+  .facts{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .terms,.alerts{grid-template-columns:minmax(0,1fr)}
+  .duty-row{grid-template-columns:minmax(0,1fr)}
+  .duty-row.head{display:none}
+  .duty svg{width:100%;max-width:240px}
+  .inputs label{grid-template-columns:minmax(0,1fr) 78px}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Hilfe zur Kurswahl</h1>
+      <p class="subtitle">Qualifikationsphase am Paulsen-Gymnasium Berlin</p>
+    </div>
+    <a class="tag back" href="./">← Zum Kurswahl-Planer</a>
+  </div>
+
+  <header class="card hero-card">
+    <div class="hero-copy">
+      <span class="eyebrow">Kurswahl für Q1 bis Q4</span>
+      <h2>Was du vor der Kurswahl wissen musst</h2>
+      <p>Wie die Kurswahl abläuft, welche Regeln für Leistungskurse und Prüfungsfächer gelten, welche Kurse Pflicht sind und wie du nachrechnest, ob deine Wahl reicht.</p>
+      <div class="facts" role="list">
+        <div class="fact" role="listitem"><b>2</b><span>Leistungs­kurse</span></div>
+        <div class="fact" role="listitem"><b>40</b><span>Kurse mindestens</span></div>
+        <div class="fact" role="listitem"><b>66</b><span>Jahreswochen­stunden</span></div>
+      </div>
+      <p class="disclaimer">Von Schülern für Schüler, nach den Regeln des Kurswahl-Planers (VO-GO Berlin §§ 23, 25, 26). Verbindlich sind die Vorgaben der Schule und die Beratung durch den Päko.</p>
+    </div>
+    <figure class="map">
+      <div class="map-head"><h3>Beispiel einer gültigen Wahl</h3><span>✓ 40 Kurse · 66 JWS</span></div>
+      <div class="map-scroll"><svg id="netz" viewBox="0 0 760 500" role="img" aria-label="Beispielwahl: jedes Fach als Linie über die Halbjahre Q1 bis Q4"></svg></div>
+    </figure>
+  </header>
+
+  <nav class="toc" aria-label="Inhalt">
+    <a href="#video"><i>▶</i>Erklärvideo</a>
+    <a href="#ablauf"><i>01</i>Ablauf</a>
+    <a href="#begriffe"><i>02</i>Begriffe</a>
+    <a href="#faecher"><i>03</i>Fächer</a>
+    <a href="#pruefung"><i>04</i>Prüfungsfächer</a>
+    <a href="#pflichten"><i>05</i>Belegpflichten</a>
+    <a href="#rechner"><i>06</i>Nachrechnen</a>
+    <a href="#beispiel"><i>07</i>Beispiel</a>
+    <a href="#sport"><i>08</i>Sport und Zusatzkurse</a>
+    <a href="#fallen"><i>09</i>Stolperfallen</a>
+    <a href="#checkliste"><i>10</i>Checkliste</a>
+  </nav>
+
+  <main>
+    <section class="block" id="video">
+      <div class="block-head"><div class="num play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5v13l11-6.5z"/></svg></div><h2>Die Kurswahl in sechs Minuten</h2>
+        <p class="hint">Das Erklärvideo geht alles einmal der Reihe nach durch: Ausgangslage, Leistungskurse, Prüfungsfächer, Belegpflichten, Sport, Nachrechnen und Abgabe.</p></div>
+      <div class="block-body">
+        <div class="video-wrap">
+          <div class="video-frame">
+            <video id="kw-video" controls preload="metadata" playsinline poster="assets/hilfe/kurswahl-video-poster.jpg">
+              <source src="assets/hilfe/kurswahl-video.mp4" type="video/mp4">
+              <track kind="subtitles" srclang="de" label="Deutsch" src="assets/hilfe/kurswahl-video.vtt">
+            </video>
+          </div>
+          <ol class="chapters" id="chapters" aria-label="Kapitel des Videos"></ol>
+        </div>
+        <p class="video-note"><span>Sprecherstimme KI-generiert (Gemini TTS)</span><span>Untertitel im Player zuschaltbar</span><span>5:15 Min.</span></p>
+      </div>
+    </section>
+
+    <section class="block" id="ablauf">
+      <div class="block-head"><div class="num">01</div><h2>Ablauf in acht Schritten</h2>
+        <p class="hint">Die Reihenfolge zählt: Deine Ausgangslage bestimmt, welche Fächer du wählen darfst, und deine Prüfungsfächer bestimmen, welche Kurse du durchgängig brauchst.</p></div>
+      <div class="block-body">
+        <ol class="route">
+          <li><h3>Ausgangslage klären</h3><p>Seit welcher Klasse lernst du welche Fremdsprache? Welches Wahlpflichtfach hattest du in Klasse 10 (Informatik, Sozialwissenschaften, Darstellendes Spiel)? Warst du in der Ruder-AG, hast du ein Sportattest?</p></li>
+          <li><h3>Zwei Leistungskurse</h3><p>LKs laufen alle vier Halbjahre mit 5 Stunden pro Woche und zählen im Abitur doppelt. Für den 1. LK gilt eine strengere Regel als für den 2. LK.</p></li>
+          <li><h3>3. und 4. PF, 5. PK</h3><p>Zwei Prüfungsfächer als Grundkurs und das Referenzfach der 5. Prüfungskomponente: Präsentationsprüfung oder Besondere Lernleistung.</p></li>
+          <li><h3>Belegpflichten auffüllen</h3><p>Deutsch, Mathematik, eine Fremdsprache, eine Naturwissenschaft und ein Fach aus Aufgabenfeld II durchgängig, dazu Geschichte oder Politik und ein künstlerisches Fach.</p></li>
+          <li><h3>Sport und Zusatzkurse</h3><p>Ein Sportkurs pro Halbjahr. Zusatzkurse helfen, auf 40 Kurse und 66 Stunden zu kommen.</p></li>
+          <li><h3>Im Planer prüfen</h3><p>Rot musst du beheben, Orange besprichst du mit dem Päko. Unten zählt der Planer Kurse, Wochenstunden und einbringpflichtige Grundkurse.</p></li>
+          <li><h3>Beratung beim Päko</h3><p>Nimm deine Wahl mit, als gesicherte Planer-Datei oder als gedruckten Übersichtsplan, und kläre alle orangen Hinweise.</p></li>
+          <li class="goal"><h3>Abgeben, vor der Frist</h3><p>Im Planer „Wahl abgeben“ klicken (danach ist sie gesperrt), das Kurswahlformular in Originalgröße (100 %) drucken und abgeben und den Kurswahlbogen im Lernraum erledigen.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="block" id="begriffe">
+      <div class="block-head"><div class="num">02</div><h2>Die wichtigsten Begriffe</h2></div>
+      <div class="block-body"><dl class="terms" id="terms"></dl></div>
+    </section>
+
+    <section class="block" id="faecher">
+      <div class="block-head"><div class="num">03</div><h2>Welches Fach wofür taugt</h2>
+        <p class="hint">Nicht jedes Fach kann jede Rolle übernehmen. Die Tabelle zeigt das Standard-Kursangebot; was dein Jahrgang tatsächlich anbietet, steht im Planer.</p></div>
+      <div class="block-body">
+        <div id="ftable"></div>
+        <div class="key">
+          <span><i class="qbox y"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>möglich</span>
+          <span><i class="qbox n"></i>nicht möglich</span>
+          <span><i class="qbox p">!</i>nur mit Bedingung (siehe Hinweis)</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="pruefung">
+      <div class="block-head"><div class="num">04</div><h2>Regeln für die fünf Prüfungskomponenten</h2>
+        <p class="hint">Die vier Prüfungsfächer und das Referenzfach der 5. PK müssen zusammen ein paar Bedingungen erfüllen. Hier passieren die meisten Fehler.</p></div>
+      <div class="block-body panels">
+        <div class="panel lk">
+          <h3><span class="rchip">1. LK</span><span class="rchip">2. LK</span>Leistungskurse</h3>
+          <ul class="check-list">
+            <li>Der <b>1. LK</b> ist Deutsch, Mathematik, Physik, Chemie, Biologie oder eine Fremdsprache, die du spätestens seit Klasse 9 lernst.</li>
+            <li>Der <b>2. LK</b> kann zusätzlich Musik, Kunst, Geschichte, Politikwissenschaft, Geografie, Informatik oder Sozialwissenschaften sein.</li>
+            <li>Eine erst in Klasse 10 begonnene Fremdsprache kann kein LK sein. Bilinguale Kurse gibt es nur als Grundkurs.</li>
+            <li>Beide LKs laufen alle vier Halbjahre: zusammen 8 LK-Kurse.</li>
+          </ul>
+        </div>
+        <div class="panel pf">
+          <h3><span class="rchip pf">3. PF</span><span class="rchip pf">4. PF</span>Alle fünf zusammen</h3>
+          <ul class="check-list">
+            <li>Unter den vier Prüfungsfächern sind mindestens <b>zwei</b> aus Deutsch, Mathematik und Fremdsprache.</li>
+            <li>Zwei Fremdsprachen als Prüfungsfächer nur, wenn auch Deutsch oder Mathematik Prüfungsfach ist.</li>
+            <li>Die fünf Komponenten decken <b>alle drei Aufgabenfelder</b> ab, mindestens eine aus Aufgabenfeld II.</li>
+            <li>Unter 3. und 4. PF höchstens eines aus Musik, Kunst, Darstellendes Spiel und Sport.</li>
+            <li>Alle fünf Fächer belegst du in Q1 bis Q4.</li>
+          </ul>
+        </div>
+        <div class="panel pk">
+          <h3><span class="rchip pk">5. PK</span>Fünfte Prüfungskomponente</h3>
+          <ul class="check-list">
+            <li><b>Präsentationsprüfung:</b> Das Referenzfach ist ein eigenes, fünftes Fach, kein Prüfungsfach.</li>
+            <li><b>Besondere Lernleistung:</b> Das Referenzfach darf ein Prüfungsfach sein. Dann müssen die vier Prüfungsfächer allein alle drei Aufgabenfelder abdecken.</li>
+            <li>Darstellendes Spiel geht nur als 5. PK und setzt das Wahlpflichtfach oder Theater-Erfahrung voraus.</li>
+          </ul>
+        </div>
+        <div class="panel sp">
+          <h3><span class="rchip sp">Sport</span>Sport als Prüfungsfach</h3>
+          <ul class="check-list">
+            <li>Sport geht nur als <b>4. PF</b> oder als <b>5. PK</b>.</li>
+            <li>Dann kommen zwei Kurse <b>Sporttheorie</b> in Q3 und Q4 dazu.</li>
+            <li>Sport gehört zu keinem Aufgabenfeld. Die übrigen vier Komponenten decken die drei Felder dann allein ab.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="pflichten">
+      <div class="block-head"><div class="num">05</div><h2>Belegpflichten</h2>
+        <p class="hint">Diese Kurse brauchst du unabhängig von deinen Prüfungsfächern; viele erfüllst du schon über LKs und Prüfungsfächer. Grundkurse belegst du nur im Block: Q1+Q2 oder Q3+Q4.</p></div>
+      <div class="block-body"><div class="duty" id="duty"></div></div>
+    </section>
+
+    <section class="block" id="rechner">
+      <div class="block-head"><div class="num">06</div><h2>Reicht das? Nachrechnen</h2>
+        <p class="hint">Drei Zahlen müssen stimmen: mindestens 40 Kurse, mindestens 66 Jahreswochenstunden und höchstens 24 einbringpflichtige Grundkurse. Die ersten beiden rechnest du hier nach.</p></div>
+      <div class="block-body calc">
+        <div class="ticket">
+          <div class="ticket-part">
+            <div class="ticket-title"><span>Eingabe</span><span>ein Kurs = ein Halbjahr</span></div>
+            <div class="formula">JWS = (LK × 5 + GK × 3 + Sport × 2) ÷ 2</div>
+            <div class="inputs">
+              <label for="in-lk"><span>LK-Kurse<small>2 LKs × 4 Halbjahre</small></span><input id="in-lk" type="number" min="0" max="8" value="8" inputmode="numeric"></label>
+              <label for="in-gk"><span>Grundkurse<small>inkl. Sporttheorie und Zusatzkurse</small></span><input id="in-gk" type="number" min="0" max="60" value="28" inputmode="numeric"></label>
+              <label for="in-sp"><span>Sport-Praxis<small>einer pro Halbjahr, 0 bei Befreiung</small></span><input id="in-sp" type="number" min="0" max="4" value="4" inputmode="numeric"></label>
+            </div>
+          </div>
+          <div class="ticket-part" aria-live="polite">
+            <div class="ticket-title"><span>Ergebnis</span><span>Werte der Beispielwahl</span></div>
+            <div class="stamp"><b id="out-k">40</b><span class="lbl">Kurse</span><span class="st8" id="st-k"></span></div>
+            <div class="stamp"><b id="out-h">66</b><span class="lbl">Jahreswochenstunden</span><span class="st8" id="st-h"></span></div>
+          </div>
+        </div>
+        <div class="side-note">
+          <p><b>Einbringen.</b> Ins Abitur zählen alle 8 LK-Kurse und genau 24 Grundkurse. Einbringpflichtig sind vor allem das 3. und 4. Prüfungsfach, Deutsch, Mathematik, die Pflicht-Fremdsprache und die Pflicht-Naturwissenschaft, soweit sie Grundkurse sind.</p>
+          <p>Sind das schon mehr als 24, ist die Wahl ungültig. Bleibt Platz, wählst du die restlichen Grundkurse später selbst.</p>
+          <p><b>Sportattest?</b> Die Sport-Praxis entfällt, die Mindestzahl bleibt aber bei 40 Kursen. Die fehlenden Kurse ergänzt du mit weiteren Grundkursen.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="beispiel">
+      <div class="block-head"><div class="num">07</div><h2>Die Beispielwahl, Halbjahr für Halbjahr</h2>
+        <p class="hint">Mit der Regelprüfung des Kurswahl-Planers geprüft: keine Fehler, genau 40 Kurse und 66 Jahreswochenstunden. Ein Beispiel, keine Empfehlung.</p></div>
+      <div class="block-body">
+        <div class="halves" id="halves"></div>
+        <div class="panel pk why">
+          <h3>Warum diese Wahl funktioniert</h3>
+          <ul class="check-list">
+            <li>1. LK Mathematik, 2. LK Englisch (seit Klasse 3): zwei aus Deutsch, Mathe und Fremdsprache sind Prüfungsfächer.</li>
+            <li>3. PF Geschichte (AF II), 4. PF Biologie (AF III), 5. PK Kunst (AF I) als Präsentationsprüfung: alle drei Aufgabenfelder sind abgedeckt.</li>
+            <li>Geschichte ist durchgängig, deshalb kommt Politikwissenschaft in Q3+Q4 dazu. Kunst läuft durchgängig und erfüllt auch das künstlerische Fach.</li>
+            <li>Chemie, Philosophie und Kreatives Schreiben füllen auf 40 Kurse auf. 19 Grundkurse sind einbringpflichtig, 5 weitere frei wählbar.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="sport">
+      <div class="block-head"><div class="num">08</div><h2>Sport und Zusatzkurse</h2></div>
+      <div class="block-body panels">
+        <div class="panel sp">
+          <h3>Sportpraxis</h3>
+          <div class="sports" id="sports"></div>
+          <div class="sport-ex" aria-label="Beispiele für die Ballspiel-Regel">
+            <div class="sx ok"><span class="v">✓ gültig</span><span class="cs"><b class="rchip sp">B7</b><b class="rchip gk">E1</b><b class="rchip sp">B7</b><b class="rchip sp">B1</b></span><small>3 Ballspiele, Volleyball zweimal, Schwimmen früh in Q2</small></div>
+            <div class="sx bad"><span class="v">✗ nicht gültig</span><span class="cs"><b class="rchip sp x">B7</b><b class="rchip sp x">B1</b><b class="rchip sp x">B3</b><b class="rchip sp x">B8</b></span><small>4 Ballspiele</small></div>
+            <div class="sx bad"><span class="v">✗ nicht gültig</span><span class="cs"><b class="rchip sp x">B7</b><b class="rchip sp x">B7</b><b class="rchip sp x">B7</b><b class="rchip gk">A1</b></span><small>dreimal derselbe Kurs</small></div>
+          </div>
+          <ul class="check-list">
+            <li>In jedem Halbjahr ein Kurs, das Angebot wechselt je Halbjahr.</li>
+            <li>Höchstens <b>drei Ballspiel-Kurse</b> (Kürzel B), also mindestens einer aus einem anderen Bewegungsfeld.</li>
+            <li>Zwei davon dürfen <b>dieselbe Sportart</b> sein, z. B. zweimal Volleyball. Öfter als zweimal geht derselbe Kurs nicht, und zweimal nur mit anderen Inhalten oder höherer Leistungsstufe.</li>
+            <li>Lege den Kurs außerhalb der Ballspiele in <b>Q1 bis Q3</b>. Kurse finden nur bei genug Anmeldungen statt; fällt er in Q4 aus, bleiben sonst nur Ballspiele.</li>
+            <li>Vom Sport befreit (Attest)? Dann entfällt die Sportpraxis, du brauchst aber trotzdem <b>mindestens 40 Kurse</b>.</li>
+            <li>Rudern setzt mindestens ein Jahr Ruder-AG und die Mitgliedschaft im Schüler-Ruder-Verband voraus.</li>
+          </ul>
+        </div>
+        <div class="panel zk">
+          <h3>Zusatzkurse</h3>
+          <ul class="check-list">
+            <li>Zählen zur Belegung, also zu den 40 Kursen und 66 Stunden.</li>
+            <li>Einbringen kannst du sie nur mit mindestens zwei regulären Kursen im zugehörigen Fach. Ausnahme: Chor und Big Band.</li>
+            <li>Kurse über zwei Halbjahre belegst du einmal, in Q1+Q2 oder in Q3+Q4.</li>
+            <li>Debating Englisch nur in Q1+Q2, Debating Politik nur in Q3+Q4.</li>
+            <li>Einbringen: je Fach höchstens zwei Zusatzkurse, insgesamt höchstens acht (je zwei Ensemblemusik und Studium und Beruf, dazu vier weitere); zu den Leistungskursfächern zusammen höchstens zwei (§ 26 Abs. 3 VO-GO).</li>
+          </ul>
+          <p class="zk-note"><b>Sonderregeln:</b> Für Zusatzkurse gelten weitere Sonderregelungen. Sprich deine Zusatzkurse auf jeden Fall mit dem Päko ab, bevor du wählst.</p>
+          <p style="color:var(--ink-3);font-size:.88rem">Angebot laut Planer: Kreatives Schreiben, TOEFL, Debating, Textiles Gestalten, Chor, Big Band, Studium und Beruf, Geschichte und Religion, Relativitätstheorie, Astronomie.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="fallen">
+      <div class="block-head"><div class="num">09</div><h2>Die häufigsten Fehler</h2>
+        <p class="hint">Im Planer erscheinen sie als rote oder orange Meldung.</p></div>
+      <div class="block-body"><div class="alerts" id="alerts"></div></div>
+    </section>
+
+    <section class="block" id="checkliste">
+      <div class="block-head"><div class="num">10</div><h2>Checkliste vor der Abgabe</h2>
+        <p class="hint">Die Haken merkt sich nur dein Browser.</p></div>
+      <div class="block-body">
+        <div class="checks" id="checklist"></div>
+        <div class="check-foot">
+          <div class="meter"><div class="meter-bar"><i id="meter"></i></div><span id="progress"></span></div>
+          <button class="btn" id="reset" type="button">Haken zurücksetzen</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Grundlage: Regeln des Kurswahl-Planers (VO-GO Berlin §§ 23, 25, 26, 49, AV Prüfungen Anlage 6a, Kursangebot 19.11.2025, Sportangebot 10.12.2025).</span>
+    <span>Dieser Leitfaden ersetzt weder die Beratung durch den Pädagogischen Koordinator noch den offiziellen Kurswahlbogen. Termine und Fristen gibt die Schule bekannt.</span>
+  </footer>
+</div>
+
+<script src="assets/hilfe/hilfe.js"></script>
+</body>
+</html>

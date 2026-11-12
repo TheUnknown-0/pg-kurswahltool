@@ -4,6 +4,12 @@ Neue Einträge oben. Format: `## Version – Datum`, darunter Stichpunkte mit `-
 Bei jeder Änderung auf `main` die Nummer in `VERSION` erhöhen (Fehlerbehebung 1.0.1, neue Funktion 1.1.0),
 sonst merken die laufenden Installationen nichts vom Update.
 
+## 1.1.0 – 2026-11-12
+
+- Neue Unterseite „Hilfe zur Kurswahl“ (`/hilfe`, ohne Anmeldung): Leitfaden mit Erklärvideo, Untertiteln und Kapiteln, Fächertabelle, Belegpflichten, Rechner, Beispielwahl, Stolperfallen und Checkliste. Verlinkt im Planer und auf der Anmeldeseite.
+- Zusätzliche Geschichte richtet sich nach dem Abiturjahrgang (§ 25 Abs. 3 und § 49 Abs. 11 VO-GO): bis Abitur 2027/28 in Q3 und Q4, ab Abitur 2028/29 (Q1 ab 2027/28) in Q1 und Q2. Maßgeblich ist der Jahrgang aus dem Formular, ohne Angabe der Jahrgang des Planers. Korrigiert 1.0.1, das die neue Regel schon für alle Jahrgänge angewandt hat.
+- Hinweis, wenn der einzige Sportkurs außerhalb der Ballspiele in Q4 liegt: Fällt er aus, bleiben nur Ballspiele.
+
 ## 1.0.1 – 2026-11-12
 
 - Neu ab Schuljahr 2026/27: Ist ein anderes Fach des Aufgabenfelds II durchgängig, muss Geschichte zusätzlich in Q1 und Q2 belegt werden (bisher Q3 und Q4). Regelprüfung, Einbringpflicht und Assistent sind angepasst.

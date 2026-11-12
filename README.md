@@ -124,6 +124,8 @@ php bin/worker.php                                     # Hintergrund-Import
 ## Aufbau
 
 - `public/index.php`: Front-Controller; `public/planer.html` + `public/assets/planer.js`: der Planer.
+- `/hilfe` (ohne Anmeldung): Hilfe zur Kurswahl mit Erklärvideo; Seite in `templates/hilfe.html`,
+  Skript und Medien in `public/assets/hilfe/`, Quellen des Videos in `tools/hilfe-video/`.
 - `src/`: schlankes MVC nach dem Vorbild von *berufsmesse* (`Core/`, `Controllers/`, `Services/`).
 - `src/Services/SchoolPdf.php`: liest Name, Klasse, Jahrgang, IDs und Kreuze aus einer Schul-PDF.
 - `bin/worker.php`: Hintergrund-Import, `bin/migrate.php`: Migrationen (laufen beim Start).
