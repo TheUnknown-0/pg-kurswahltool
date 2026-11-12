@@ -27,7 +27,11 @@ PAL = dict(
     blue="#3a74b9", blue_soft="#e7eff8", lk="#153d6f", lk_soft="#dfe8f4", pk="#365d44", pk_soft="#edf6f0",
     sport="#b66a00", sport_soft="#fff2d9", red="#a52424", red_soft="#fae7e7", orange="#b66a00", orange_soft="#fff2d9",
     green="#226038", green_soft="#dff2e5", zk="#8793a2", zk_soft="#eef1f5",
+    # Netzplan der Hilfeseite (Linienfarben wie im Hero-Plan)
+    navy="#153d6f", pf="#4f84c4", gkline="#235a96", strong="#b9c4d2", zone="#edf5ff", paper3="#e8edf3",
+    gktxt="#40546b", sp="#b66a00", mapline="#cbd8e7",
 )
+LINECOL = dict(lk="navy", pf="pf", pk="pk", gk="gkline", zk="zk", sp="sp")
 
 
 def col(name, a=1.0):
@@ -294,13 +298,14 @@ SCENES, TOTAL = build_timeline()
 
 # ------------------------------------------------------------------ Hintergrund
 def make_grid_image():
+    """Feines Kartenraster wie auf Netzplan-Papier."""
     s = skia.Surface(W + 240, H + 240)
     c = s.getCanvas()
     c.clear(skia.ColorTRANSPARENT)
-    cw, ch, g = 96, 60, 14
-    for gy in range(0, H + 240, ch + g):
-        for gx in range(0, W + 240, cw + g):
-            rrect(c, gx, gy, cw, ch, 9, "grid", 0.55, 1.4)
+    for i, gx in enumerate(range(0, W + 240, 55)):
+        line(c, gx, 0, gx, H + 240, "grid", 0.9 if i % 4 == 0 else 0.45, 1.2)
+    for i, gy in enumerate(range(0, H + 240, 55)):
+        line(c, 0, gy, W + 240, gy, "grid", 0.9 if i % 4 == 0 else 0.45, 1.2)
     return s.makeImageSnapshot()
 
 
@@ -341,7 +346,7 @@ def background(c, t):
         BG = _bg_cache()
     base, gridimg, sprites, vig = BG
     c.drawImage(base, 0, 0)
-    c.drawImage(gridimg, -((t * 7) % 110), -((t * 4) % 74))
+    c.drawImage(gridimg, -((t * 7) % 220), -((t * 4) % 220))
     for (cx, cy, r, cname, a, sp), spr in zip(GLOWS, sprites):
         x = cx + math.sin(t * sp) * 120
         y = cy + math.cos(t * sp * 1.3) * 80
@@ -349,18 +354,35 @@ def background(c, t):
     c.drawImage(vig, 0, 0)
 
 
+HUD_NAMES = ["Start", "Ausgangslage", "Leistungskurse", "Prüfungsfächer", "Belegpflichten", "Sport", "Nachrechnen", "Abgabe"]
+
+
 def hud(c, t):
+    """Fortschritt als U-Bahn-Linie: eine Station je Kapitel, gefahrene Strecke in Navy."""
     n = len(SCENES)
-    x0, x1, y = 120, 1800, 66
-    gap = 12
-    segw = (x1 - x0 - gap * (n - 1)) / n
     fade = ez(t, 0.2, 1.0) * (1 - ez(t, TOTAL - 1.6, 1.2))
-    for i, sc in enumerate(SCENES):
-        x = x0 + i * (segw + gap)
-        rrect(c, x, y, segw, 5, 2.5, "line", 0.9 * fade)
+    if fade > 0.003:
+        xs = np.linspace(214, 1780, n)
+        y = 62
+        bw = badge(c, 120, y - 17, "Q1–4", "lk", fade, 19, h=34)
+        line(c, xs[0], y, xs[-1], y, "strong", 0.8 * fade, 7)
+        cur = 0
+        for i, sc in enumerate(SCENES):
+            if t >= sc.start:
+                cur = i
+        sc = SCENES[cur]
         k = clamp((t - sc.start) / (sc.end - sc.start))
-        if k > 0:
-            rrect(c, x, y, max(5, segw * k), 5, 2.5, "blue", fade)
+        xr = xs[cur] + ((xs[cur + 1] - xs[cur]) * k if cur < n - 1 else 0)
+        line(c, xs[0], y, xr, y, "navy", fade, 7)
+        for i, x in enumerate(xs):
+            on = i <= cur
+            r = 10 if i == cur else 7.5
+            circle(c, x, y, r, "white", fade)
+            circle(c, x, y, r, "navy" if on else "strong", fade, 3.2 if i == cur else 2.6)
+            if i == cur:
+                circle(c, x, y, 4.2, "navy", fade)
+            f = font("b", 18, 650 if i == cur else 500)
+            text(c, HUD_NAMES[i], x, y + 38, f, "head" if i == cur else ("ink2" if on else "ink3"), fade, "c")
     # KI-Hinweis unten rechts
     f = font("b", 21, 560)
     label = "KI-generierte Stimme (Gemini TTS)"
@@ -373,10 +395,38 @@ def hud(c, t):
 
 
 # ------------------------------------------------------------------ Bausteine
+def badge(c, x, y, label, kind="lk", a=1.0, size=20, h=None, w=None, pad=None):
+    """Linienschild wie im Netzplan: farbig mit weißer Schrift, GK weiß mit Rand, ZK grau."""
+    if a <= 0.003:
+        return 0
+    f = font("b", size, 700)
+    h = h or size * 1.75
+    pad = size * 0.6 if pad is None else pad
+    w = w or tw(label, f) + 2 * pad
+    r = h * 0.24
+    if kind in ("gk", "zk"):
+        rrect(c, x, y, w, h, r, "white" if kind == "gk" else "paper3", a)
+        rrect(c, x, y, w, h, r, "strong", a, 1.6)
+        tc = "gktxt"
+    else:
+        rrect(c, x, y, w, h, r, LINECOL.get(kind, kind), a)
+        tc = "white"
+    text(c, label, x + w / 2, y + h / 2 + size * 0.36, f, tc, a, "c")
+    return w
+
+
+def station(c, x, y, r, a=1.0, ring="navy", k=1.0):
+    if k <= 0 or a <= 0.003:
+        return
+    rr = r * k
+    circle(c, x, y, rr, "white", a)
+    circle(c, x, y, rr, ring, a, r * 0.36)
+
+
 def header(c, t, sc, eyebrow, title):
     k = ez(t, sc.start + 0.15, 0.7)
     dy = (1 - k) * 26
-    text(c, eyebrow.upper(), 120, 200 + dy, font("b", 24, 700), "blue", k, track=3)
+    badge(c, 120, 158 + dy, eyebrow, "lk", k, 23, h=42)
     text(c, title, 116, 292 + dy, font("d", 80, 750), "head", k)
 
 
@@ -384,9 +434,10 @@ def chip(c, x, y, label, color="blue", a=1.0, size=30, fill=True, h=None, pad=22
     f = font("b", size, 600)
     w = tw(label, f) + pad * 2
     h = h or size * 1.75
+    r = h * 0.24
     if fill:
-        rrect(c, x, y, w, h, h / 2, color + "_soft" if color + "_soft" in PAL else color, a)
-    rrect(c, x, y, w, h, h / 2, color, a, 2)
+        rrect(c, x, y, w, h, r, color + "_soft" if color + "_soft" in PAL else color, a)
+    rrect(c, x, y, w, h, r, color, a, 2)
     text(c, label, x + pad, y + h / 2 + size * 0.36, f, txt or ("ink" if fill else color), a)
     return w
 
@@ -420,23 +471,75 @@ def card(c, x, y, w, h, a=1.0, accent=None):
         sp.setMaskFilter(SHADOW_MF)
         c.drawRRect(skia.RRect.MakeRectXY(skia.Rect.MakeXYWH(x, y + 8, w, h), 14, 14), sp)
     rrect(c, x, y, w, h, 14, "card", a)
-    if accent:
-        rrect(c, x, y, 7, h, 3.5, accent, a)
+    if accent and a > 0.003:
+        # Akzent oben wie die Hero-Karte der Seite (border-top)
+        c.save()
+        c.clipRRect(skia.RRect.MakeRectXY(skia.Rect.MakeXYWH(x, y, w, h), 14, 14), skia.ClipOp.kIntersect, True)
+        c.drawRect(skia.Rect.MakeXYWH(x, y, w, 6), paint(accent, a))
+        c.restore()
+
+
+def dotted(c, x1, y, x2, color="strong", a=1.0, w=3.0):
+    if a <= 0.003:
+        return
+    p = paint(color, a, w)
+    p.setPathEffect(skia.DashPathEffect.Make([0.1, 11.0], 0))
+    c.drawLine(x1, y, x2, y, p)
 
 
 def qcells(c, t, t0, x, y, cells, color, cw=54, ch=40, gap=8, stagger=0.08, labels=None, a=1.0, codes=None):
-    for i in range(4):
-        cx = x + i * (cw + gap)
-        rrect(c, cx, y, cw, ch, 8, "line", 0.8 * a, 1.5)
-        if cells[i]:
-            k = ez(t, t0 + i * stagger, 0.35)
+    """Halbjahre als Linie mit Stationen (wie die Belegpflichten der Seite)."""
+    cy = y + ch / 2
+    xs = [x + i * (cw + gap) + cw / 2 for i in range(4)]
+    r = max(8.0, ch * 0.27)
+    lw = max(7.0, ch * 0.3)
+    dotted(c, xs[0], cy, xs[3], "strong", a, 3)
+    for i in range(3):
+        if cells[i] and cells[i + 1]:
+            k = ezio(t, t0 + i * stagger, 0.45)
             if k > 0:
-                hh = ch * k
-                rrect(c, cx, y + ch - hh, cw, hh, 8, color, a)
-                if codes and k > 0.8:
-                    text(c, codes[i], cx + cw / 2, y + ch / 2 + 7, font("m", 19), "white", a * ez(t, t0 + i * stagger + 0.2, 0.3), "c")
+                line(c, xs[i], cy, xs[i] + (xs[i + 1] - xs[i]) * k, cy, color, a, lw)
+    for i in range(4):
+        if cells[i]:
+            station(c, xs[i], cy, r, a, color, clamp(pop(t, t0 + i * stagger, 0.4), 0, 1.3))
+        else:
+            circle(c, xs[i], cy, r * 0.5, "card2", a)
+            circle(c, xs[i], cy, r * 0.5, "strong", a, 1.8)
         if labels:
-            text(c, f"Q{i + 1}", cx + cw / 2, y - 12, font("m", 18), "ink3", a, "c")
+            text(c, f"Q{i + 1}", xs[i], y - 12, font("m", 18), "ink3", a, "c")
+
+
+def zone_bands(c, xs, y0, y1, a=1.0, half=56, lab_size=18):
+    """Hellblaue Zonen für 1. und 2. Jahr wie im Netzplan."""
+    for (i, j, lab) in ((0, 1, "1. Jahr"), (2, 3, "2. Jahr")):
+        rrect(c, xs[i] - half, y0, xs[j] - xs[i] + 2 * half, y1 - y0, 16, "zone", a)
+        text(c, lab, (xs[i] + xs[j]) / 2, y1 - 14, font("b", lab_size, 700), "ink3", a, "c")
+
+
+def netz(c, t, rows, starts, x, xs, y0, step, a=1.0, s=1.0, top_labels=True, dim=None):
+    """Netzplan: je Fach ein Linienschild, eine Linie über die Halbjahre und Stationen.
+    rows: (name, schild, art, [q1..q4]); starts: Startzeit je Zeile."""
+    if top_labels:
+        for i, qx in enumerate(xs):
+            text(c, f"Q{i + 1}", qx, y0 - 34 * s, font("d", 30 * s, 800), "navy", a, "c")
+    bw, bh = 86 * s, 34 * s
+    for i, (name, lab, kind, cells) in enumerate(rows):
+        t0 = starts[i]
+        k = ez(t, t0 - 0.1, 0.45)
+        if k <= 0:
+            continue
+        ra = a * (dim[i] if dim else 1.0)
+        y = y0 + i * step
+        badge(c, x, y - bh / 2 + (1 - k) * 10, lab, kind, k * ra, 17 * s, h=bh, w=bw)
+        text(c, name, x + bw + 16 * s, y + 9 * s, font("b", 25 * s, 600), "ink", k * ra)
+        first, last = cells.index(1), 3 - cells[::-1].index(1)
+        kl = ezio(t, t0, 0.8)
+        lc = LINECOL[kind]
+        if kl > 0:
+            line(c, xs[first], y, xs[first] + (xs[last] - xs[first]) * kl, y, lc, ra * (0.45 if kind == "gk" else 1.0), 12 * s)
+        for q in range(4):
+            if cells[q]:
+                station(c, xs[q], y, 10.5 * s, ra, "navy", clamp(pop(t, t0 + 0.35 + 0.12 * (q - first), 0.35), 0, 1.3))
 
 
 def meter(c, t, x, y, w, label, val, target, color="blue", a=1.0, fmt="{:.0f}"):
@@ -453,81 +556,80 @@ def meter(c, t, x, y, w, label, val, target, color="blue", a=1.0, fmt="{:.0f}"):
 
 
 # ------------------------------------------------------------------ Szenen
+def map_head(c, x, y, w, a, okk, title="Beispiel einer gültigen Wahl", size=32):
+    """Kopf der Netzplan-Karte wie auf der Seite: Titel links, grüne Plakette rechts."""
+    text(c, title, x, y, font("d", size, 700), "head", a)
+    if okk > 0:
+        f = font("b", size * 0.72, 650)
+        lab = "40 Kurse · 66 JWS"
+        pw = tw(lab, f) + 76
+        h = size * 1.3
+        px = x + w - pw
+        rrect(c, px, y - h * 0.72, pw, h, h / 2, "green_soft", a * okk)
+        check(c, px + 28, y - h * 0.72 + h / 2, h * 0.42, "green", a * okk, 3.5, ez(okk, 0, 1))
+        text(c, lab, px + 50, y - h * 0.72 + h / 2 + size * 0.26, f, "green", a * okk)
+
+
 def s_intro(c, t, sc):
     b = sc.b
     morph = ezio(t, b[3] - 0.2, 1.0)
     k0 = ez(t, sc.start + 0.2, 0.9)
-    # Titel
-    size = lerp(176, 92, morph)
+    size = lerp(150, 92, morph)
     f = font("d", size, 700)
-    y1 = lerp(420, 300, morph)
+    y1 = lerp(400, 300, morph)
     x2 = lerp(118, 118 + tw("Kurswahl ", f), morph)
-    y2 = lerp(590, 300, morph)
-    text(c, "PAULSEN-GYMNASIUM  ·  QUALIFIKATIONSPHASE", 122, lerp(230, 196, morph) + (1 - k0) * 20, font("b", 24, 700), "blue", k0, track=3)
-    text(c, "Kurswahl", 112, y1 + (1 - k0) * 30, f, "ink", k0)
+    y2 = lerp(548, 300, morph)
+    text(c, "PAULSEN-GYMNASIUM  ·  QUALIFIKATIONSPHASE", 122, lerp(232, 196, morph) + (1 - k0) * 20, font("b", 24, 700), "blue", k0, track=3)
+    text(c, "Kurswahl", 112, y1 + (1 - k0) * 30, f, "head", k0)
     k1 = ez(t, sc.start + 0.55, 0.9)
     text(c, "Q1–Q4", x2 - (1 - morph) * 6, y2 + (1 - k1) * 30, f, "blue", k1)
-    sub_a = ez(t, sc.start + 0.9, 0.8) * (1 - ez(t, b[2] - 0.3, 0.5))
-    text(c, "Was du wissen musst, Schritt für Schritt", 120, 670, font("b", 40, 450), "ink2", sub_a)
+    fade = 1 - ez(t, b[3] - 0.4, 0.5)
+    text(c, "Was du wissen musst, Schritt für Schritt", 120, 640, font("b", 38, 450), "ink2", ez(t, sc.start + 0.9, 0.8) * fade)
 
-    # Kursraster rechts
-    ra = 1 - ez(t, b[3] - 0.3, 0.6)
-    if ra > 0:
-        x0, cw, gap, ybot = 1110, 150, 24, 870
-        rows = [["lk", "lk", "blue", "blue", "pk", "blue", "blue", "blue", "zk", "sport"]] * 2 + \
-               [["lk", "lk", "blue", "blue", "pk", "blue", "blue", "blue", "blue", "sport"]] * 2
-        for i in range(4):
-            x = x0 + i * (cw + gap)
-            k = ez(t, b[0] + 0.15 * i, 0.7)
-            text(c, f"Q{i + 1}", x + cw / 2, 268 + (1 - k) * 20, font("m", 30, 400), "ink2", k * ra, "c")
-            rrect(c, x, 292 + (1 - k) * 40, cw, 590, 16, "line", 0.9 * k * ra, 1.6)
-            for j, cc in enumerate(rows[i]):
-                kk = ez(t, b[1] + 0.25 + j * 0.13 + i * 0.05, 0.45)
-                if kk <= 0:
-                    continue
-                cy = ybot - (j + 1) * 55 - (1 - kk) * 60
-                rrect(c, x + 10, cy, cw - 20, 46, 9, cc, kk * ra)
-        la = ez(t, b[1] + 1.8, 0.6) * ra
-        text(c, "4 Halbjahre  ·  je rund 10 Kurse", x0 + (4 * cw + 3 * gap) / 2, 935, font("b", 30, 500), "ink2", la, "c")
-
-    # Kennzahlen
-    sa = 1 - ez(t, b[3] - 0.3, 0.5)
-    stats = [("2", "Leistungskurse", "lk"), ("5", "Prüfungs-\nkomponenten", "pk"), ("40+", "Kurse\nmindestens", "blue")]
-    for i, (num, lab, cc) in enumerate(stats):
-        k = pop(t, b[2] + 0.55 * i + 0.2, 0.55)
+    # Kennzahlen als Kacheln wie im Hero der Seite
+    facts = [("2", "Leistungs-", "kurse"), ("5", "Prüfungs-", "komponenten"), ("40", "Kurse", "mindestens")]
+    for i, (num, l1, l2) in enumerate(facts):
+        k = pop(t, b[2] + 0.2 + 0.7 * i, 0.55)
         if k <= 0:
             continue
-        x = 120 + i * 300
-        a = clamp(k) * sa
-        c.save()
-        c.translate(x, 830)
-        c.scale(0.7 + 0.3 * k, 0.7 + 0.3 * k)
-        text(c, num, 0, 0, font("d", 128, 700), cc, a)
-        c.restore()
-        for li, ln in enumerate(lab.split("\n")):
-            text(c, ln, x + 4, 878 + li * 36, font("b", 28, 500), "ink2", a)
+        a = clamp(k) * fade
+        x, y = 120 + i * 270, 712 + (1 - clamp(k)) * 24
+        rrect(c, x, y, 248, 188, 14, "card", a)
+        rrect(c, x, y, 248, 188, 14, "mapline", a, 1.8)
+        text(c, num, x + 28, y + 92, font("d", 80, 800), "navy", a)
+        text(c, l1, x + 30, y + 136, font("b", 25, 550), "ink2", a)
+        text(c, l2, x + 30, y + 168, font("b", 25, 550), "ink2", a)
 
-    text(c, "Dein Weg durch die Kurswahl", 120, 392, font("b", 40, 450), "ink2", ez(t, b[3] + 0.6, 0.7))
-    # Fahrplan
-    labels =["Ausgangslage", "Leistungskurse", "Prüfungsfächer", "Belegpflichten", "Sport und\nZusatzkurse", "Nachrechnen", "Abgeben"]
-    xs = np.linspace(200, 1720, len(labels))
+    # Netzplan der Beispielwahl
+    ma = ez(t, b[0] + 1.2, 0.8) * fade
+    if ma > 0:
+        x, y, w, h = 1000, 168 + (1 - ma) * 30, 800, 812
+        card(c, x, y, w, h, ma)
+        rrect(c, x, y, w, h, 14, "mapline", ma, 1.5)
+        map_head(c, x + 34, y + 62, w - 68, ma, ez(t, b[1] + 6.6, 0.6))
+        xs = [x + 404, x + 502, x + 600, x + 698]
+        zone_bands(c, xs, y + 96, y + h - 18, ma, half=46)
+        starts = [b[1] + 0.3 + i * 0.5 for i in range(len(EX))]
+        netz(c, t, EX, starts, x + 30, xs, y + 182, 54.5, ma, s=0.92)
+
+    # Dein Weg: Kapitel als Linie
+    wa = ez(t, b[3] + 0.6, 0.7)
+    text(c, "Dein Weg durch die Kurswahl", 120, 392, font("b", 40, 450), "ink2", wa)
+    labels = ["Ausgangslage", "Leistungskurse", "Prüfungsfächer", "Belegpflichten", "Sport und\nZusatzkurse", "Nachrechnen", "Abgeben"]
+    xs = np.linspace(280, 1720, len(labels))
     ly = 640
-    kl = ez(t, b[3] + 0.4, 2.2)
+    kl = ezio(t, b[3] + 0.3, 2.4)
     if kl > 0:
-        line(c, xs[0], ly, xs[0] + (xs[-1] - xs[0]) * kl, ly, "line", 1.0, 5)
+        badge(c, 120, ly - 22, "Q1–4", "lk", wa, 22, h=44, w=86)
+        line(c, xs[0], ly, xs[0] + (xs[-1] - xs[0]) * kl, ly, "navy", 1.0, 16)
     for i, (x, lab) in enumerate(zip(xs, labels)):
         k = pop(t, b[3] + 0.45 + i * 0.3, 0.5)
         if k <= 0:
             continue
-        c.save()
-        c.translate(x, ly)
-        c.scale(k, k)
-        circle(c, 0, 0, 40, "blue_soft", 1)
-        circle(c, 0, 0, 40, "blue", 1, 3)
-        text(c, str(i + 1), 0, 14, font("d", 40, 700), "ink", 1, "c")
-        c.restore()
+        station(c, x, ly, 26, 1.0, "navy", clamp(k, 0, 1.3))
+        text(c, str(i + 1), x, ly - 52, font("d", 30, 800), "navy", clamp(k), "c")
         for li, ln in enumerate(lab.split("\n")):
-            text(c, ln, x, ly + 92 + li * 36, font("b", 29, 550), "ink", clamp(k), "c")
+            text(c, ln, x, ly + 82 + li * 36, font("b", 29, 600), "ink", clamp(k), "c")
 
 
 def s_ausgangslage(c, t, sc):
@@ -575,7 +677,7 @@ def s_ausgangslage(c, t, sc):
          ez(t, b[2] + 1.6, 0.5))
     # Karte 3
     x = xs[2]
-    opts = [("Ruder-AG, mind. 1 Jahr", "Rudern wird wählbar", True), ("Attest: dauerhaft befreit", "kein Sport, 39 Kurse reichen", False)]
+    opts = [("Ruder-AG, mind. 1 Jahr", "Rudern wird wählbar", True), ("Attest: dauerhaft befreit", "kein Sport, trotzdem 40 Kurse", False)]
     for j, (n, res, on) in enumerate(opts):
         k = ez(t, b[3] + 0.4 + j * 0.9, 0.5)
         if k <= 0:
@@ -595,7 +697,7 @@ def s_lk(c, t, sc):
     for j, lab in enumerate(["1. LK", "2. LK"]):
         k = ez(t, b[0] + 0.3 + j * 0.3, 0.5)
         y = 372 + j * 78
-        text(c, lab, 120, y + 33, font("d", 38, 700), "lk", k)
+        badge(c, 120, y + 3, lab, "lk", k, 21, h=40, w=104)
         qcells(c, t, b[0] + 0.5 + j * 0.3, 260, y, [1, 1, 1, 1], "lk", cw=90, ch=46, gap=10, a=k)
     ka = ez(t, b[0] + 2.4, 0.5)
     chip(c, 690, 380, "5 Std. pro Woche", "lk", ka, 28)
@@ -710,16 +812,17 @@ def s_pflichten(c, t, sc):
     header(c, t, sc, "Schritt 4", "Belegpflichten")
     text(c, "Diese Kurse brauchst du immer.", 120, 360, font("b", 36, 450), "ink2", ez(t, b[0] + 1.0, 0.6))
     rows = [
-        (1, "Deutsch", [1, 1, 1, 1], "blue", ""),
-        (1, "Mathematik", [1, 1, 1, 1], "blue", ""),
-        (1, "Eine Fremdsprache", [1, 1, 1, 1], "blue", ""),
-        (1, "Eine Naturwissenschaft", [1, 1, 1, 1], "blue", "nur Bio: + 2 Kurse Ph/Ch"),
-        (2, "Gesellschaftswiss. Fach", [1, 1, 1, 1], "blue", ""),
-        (2, "Geschichte oder Politik", [0, 0, 1, 1], "blue", "Q3+Q4, das jeweils andere Fach"),
+        (1, "Deutsch", [1, 1, 1, 1], "navy", ""),
+        (1, "Mathematik", [1, 1, 1, 1], "navy", ""),
+        (1, "Eine Fremdsprache", [1, 1, 1, 1], "navy", ""),
+        (1, "Eine Naturwissenschaft", [1, 1, 1, 1], "navy", "nur Bio: + 2 Kurse Ph/Ch"),
+        (2, "Gesellschaftswiss. Fach", [1, 1, 1, 1], "navy", ""),
+        (2, "Ist es Geschichte: + Politik", [0, 0, 1, 1], "pf", "Politikwiss. in Q3+Q4"),
+        (2, "Sonst: + Geschichte", [1, 1, 0, 0], "pf", "NEU"),
         (3, "Musik, Kunst oder DS", [1, 1, 0, 0], "pk", "2 Kurse, Q1+Q2 oder Q3+Q4"),
     ]
-    y0, rh = 420, 74
-    timing = {1: [0.2, 1.6, 3.4, 5.6], 2: [0.2, 3.0], 3: [0.2]}
+    y0, rh = 404, 66
+    timing = {1: [0.2, 1.6, 3.4, 5.6], 2: [0.2, 3.3, 7.8], 3: [0.2]}
     seen = {1: 0, 2: 0, 3: 0}
     for i, (bi, name, cells, cc, note) in enumerate(rows):
         t0 = b[bi] + timing[bi][seen[bi]]
@@ -728,97 +831,176 @@ def s_pflichten(c, t, sc):
         if k <= 0:
             continue
         y = y0 + i * rh
-        rrect(c, 120, y, 1180, rh - 10, 12, "card", 0.85 * k)
-        text(c, name, 150, y + 42, font("b", 31, 600), "ink", k)
-        qcells(c, t, t0 + 0.2, 560, y + 13, cells, cc, cw=58, ch=38, gap=8, a=k)
-        if note:
-            text(c, note, 836, y + 41, font("b", 24, 450), "ink3", ez(t, t0 + 0.8, 0.5))
-        check(c, 1262, y + 32, 26, "green", k, 4, ez(t, t0 + 0.6, 0.4))
+        rrect(c, 120, y, 1180, rh - 10, 12, "card", 0.9 * k)
+        text(c, name, 150, y + 38, font("b", 29, 600), "ink", k)
+        qcells(c, t, t0 + 0.2, 556, y + 9, cells, cc, cw=58, ch=38, gap=8, a=k)
+        if note == "NEU":
+            kn = ez(t, t0 + 2.0, 0.5)
+            w = badge(c, 836, y + 10, "neu ab 2026/27", "red", k * kn, 19, h=36)
+            ko = ez(t, t0 + 5.6, 0.5)
+            if ko > 0:
+                f = font("b", 23, 500)
+                lab = "bisher Q3+Q4"
+                tx = 836 + w + 18
+                text(c, lab, tx, y + 36, f, "ink3", k * ko)
+                line(c, tx - 2, y + 28, tx + (tw(lab, f) + 4) * ez(t, t0 + 6.1, 0.5), y + 28, "red", k * ko, 2.5)
+        elif note:
+            text(c, note, 836, y + 37, font("b", 23, 450), "ink3", ez(t, t0 + 0.8, 0.5))
+        check(c, 1262, y + 28, 24, "green", k, 4, ez(t, t0 + 0.6, 0.4))
     # Block-Regel
     k = ez(t, b[4] - 0.1, 0.6)
     if k > 0:
-        x, y = 1350, 420
-        card(c, x, y, 450, 512, k, "blue")
-        text(c, "Grundkurse", x + 40, y + 70, font("d", 44, 700), "ink", k)
-        text(c, "nur im Block", x + 40, y + 116, font("b", 32, 500), "ink2", k)
+        x, y = 1350, 404
+        card(c, x, y, 450, 518, k, "navy")
+        text(c, "Grundkurse", x + 40, y + 74, font("d", 44, 700), "ink", k)
+        text(c, "nur im Block", x + 40, y + 120, font("b", 32, 500), "ink2", k)
         for blk in range(2):
-            by = y + 190 + blk * 140
-            tk = ez(t, b[4] + 0.9 + blk * 1.2, 0.35)
-            for q in range(2):
-                bx = x + 50 + q * 120
-                rrect(c, bx, by, 105, 70, 12, "line", k, 2)
-                if tk > 0:
-                    rrect(c, bx, by + 70 * (1 - tk), 105, 70 * tk, 12, "blue", k)
-                text(c, f"Q{blk * 2 + q + 1}", bx + 52, by + 46, font("m", 26), "ink" if tk > 0.5 else "ink3", k, "c")
-            rrect(c, x + 40, by - 10, 245, 90, 18, "blue", 0.6 * k * tk, 2.5)
+            by = y + 222 + blk * 168
+            tk = ezio(t, b[4] + 0.9 + blk * 1.2, 0.5)
+            xa, xb = x + 110, x + 300
+            dotted(c, xa, by, xb, "strong", k, 3)
+            if tk > 0:
+                line(c, xa, by, xa + (xb - xa) * tk, by, "navy", k, 14)
+            for q, qx in enumerate((xa, xb)):
+                station(c, qx, by, 20, k, "navy", clamp(pop(t, b[4] + 0.9 + blk * 1.2 + q * 0.3, 0.4), 0, 1.3))
+                text(c, f"Q{blk * 2 + q + 1}", qx, by + 58, font("d", 28, 750), "navy", k, "c")
             if blk == 0:
-                text(c, "oder", x + 335, by + 120, font("b", 28, 500), "ink3", k)
+                text(c, "oder", x + 205, by + 104, font("b", 27, 500), "ink3", k, "c")
+
+
+SPORT_EX = [
+    (True, "gültig", "3 Ballspiele", [("B7", "Volleyball"), ("B1", "Basketball"), ("B7", "Volleyball"), ("E1", "Schwimmen")]),
+    (False, "nicht gültig", "4 Ballspiele", [("B7", "Volleyball"), ("B1", "Basketball"), ("B3", "Fußball"), ("B8", "Badminton")]),
+    (False, "nicht gültig", "3-mal derselbe Kurs", [("B7", "Volleyball"), ("B7", "Volleyball"), ("B7", "Volleyball"), ("A1", "Leichtathl.")]),
+]
 
 
 def s_sport(c, t, sc):
     b = sc.b
     header(c, t, sc, "Schritt 5", "Sport und Zusatzkurse")
-    cards = [("B7", "Volleyball", True), ("A1", "Leichtathletik", False), ("B8", "Badminton", True), ("E1", "Schwimmen", False)]
-    for i, (code, name, isball) in enumerate(cards):
-        k = pop(t, b[1] + 0.2 + i * 0.3, 0.5)
-        if k <= 0:
-            continue
-        x = 120 + i * 230
-        y = 380
-        a = clamp(k)
-        c.save()
-        c.translate(x + 105, y + 105)
-        c.scale(0.8 + 0.2 * k, 0.8 + 0.2 * k)
-        card(c, -105, -105, 210, 210, a)
-        rrect(c, -105, -105, 210, 8, 4, "sport", a)
-        text(c, f"Q{i + 1}", -80, -55, font("m", 22), "ink3", a)
-        text(c, code, -80, 10, font("d", 60, 700), "sport", a)
-        text(c, name, -80, 62, font("b", 25, 550), "ink", a)
-        if isball:
-            ball(c, 62, -58, 16, "orange", a)
+    main = 1 - ez(t, b[4] - 0.3, 0.5)
+    if main > 0.003:
+        c.saveLayerAlpha(None, int(255 * main))
+        # Sportpraxis mit drei Beispielen
+        k = ez(t, b[1] - 0.1, 0.6)
+        if k > 0:
+            x, y, w, h = 120, 356, 920, 610
+            card(c, x, y, w, h, k, "sp")
+            text(c, "Sportpraxis", x + 36, y + 66, font("d", 40, 700), "ink", k)
+            text(c, "ein Kurs pro Halbjahr", x + 290, y + 64, font("b", 27, 450), "ink2", k)
+            xs = [x + 418, x + 546, x + 674, x + 802]
+            for q, qx in enumerate(xs):
+                text(c, f"Q{q + 1}", qx, y + 126, font("d", 28, 800), "navy", k, "c")
+            # Zeitpunkte: Zeile 0 im Takt der Sprache, Zeilen 1 und 2 danach als Gegenbeispiele
+            pops = [[b[1] + 2.8, b[1] + 3.4, b[1] + 4.0, b[1] + 10.6], [b[1] + 12.3 + 0.15 * q for q in range(4)],
+                    [b[1] + 13.9 + 0.15 * q for q in range(4)]]
+            verdict_at = [b[1] + 11.4, b[1] + 13.1, b[1] + 14.7]
+            for r, (ok, lab, sub, courses) in enumerate(SPORT_EX):
+                ry = y + 222 + r * 142
+                rk = ez(t, (b[1] + 0.4) if r == 0 else pops[r][0] - 0.3, 0.4) * k
+                if rk <= 0:
+                    continue
+                if ok:
+                    line(c, xs[0], ry, xs[3], ry, "sp", rk * 0.9, 10)
+                else:
+                    dotted(c, xs[0], ry, xs[3], "strong", rk, 3.5)
+                for q, (code, name) in enumerate(courses):
+                    pk = pop(t, pops[r][q], 0.45)
+                    if pk <= 0:
+                        station(c, xs[q], ry, 11, rk, "strong")
+                        continue
+                    a = clamp(pk) * rk
+                    isball = code[0] == "B"
+                    c.save()
+                    c.translate(xs[q], ry)
+                    c.scale(0.7 + 0.3 * pk, 0.7 + 0.3 * pk)
+                    bad = (not ok) and t > verdict_at[r] and (r == 1 or code == "B7")
+                    if bad:
+                        rrect(c, -58, -30, 116, 60, 14, "red", a, 3.5)
+                    badge(c, -50, -23, code, "sp" if isball else "gk", a, 24, h=46, w=100)
+                    c.restore()
+                    text(c, name, xs[q], ry + 50, font("b", 19, 550), "ink2", a, "c")
+                # Ergebnis links
+                vk = ez(t, verdict_at[r], 0.4) * rk
+                if vk > 0:
+                    cc = "green" if ok else "red"
+                    circle(c, x + 58, ry - 6, 24, cc + "_soft", vk)
+                    if ok:
+                        check(c, x + 58, ry - 6, 24, cc, vk, 4, vk)
+                    else:
+                        cross(c, x + 58, ry - 6, 18, cc, vk, 4)
+                    text(c, lab, x + 96, ry + 2, font("b", 28, 700), cc, vk)
+                    para(c, sub, x + 96, ry + 36, font("b", 20, 450), 230, 25, "ink2", vk)
+            # Klammer: Volleyball doppelt
+            bk = ez(t, b[1] + 6.2, 0.5) * k
+            if bk > 0:
+                by = y + 222 - 46
+                x1, x2 = xs[0], xs[0] + (xs[2] - xs[0]) * ezio(t, b[1] + 6.2, 0.6)
+                line(c, x1, by, x2, by, "sp", bk, 3.5)
+                line(c, x1, by, x1, by + 12, "sp", bk, 3.5)
+                if x2 > xs[2] - 2:
+                    line(c, xs[2], by, xs[2], by + 12, "sp", bk, 3.5)
+                f = font("b", 21, 700)
+                lab = "2-mal Volleyball"
+                lw = tw(lab, f) + 24
+                mx = (xs[0] + xs[2]) / 2
+                rrect(c, mx - lw / 2, by - 16, lw, 32, 8, "sport_soft", bk)
+                text(c, lab, mx, by + 7.5, f, "sp", bk, "c")
+            text(c, "höchstens 3 Ballspiele (B)", x + w - 36, y + 64, font("b", 24, 600), "sp", ez(t, b[1] + 3.0, 0.5) * k, "r")
+        # Befreiung
+        k = ez(t, b[2] - 0.1, 0.6)
+        if k > 0:
+            x, y, w, h = 1080, 356, 720, 340
+            card(c, x, y, w, h, k, "navy")
+            text(c, "Vom Sport befreit?", x + 36, y + 64, font("d", 38, 700), "ink", k)
+            gone = ez(t, b[2] + 1.6, 0.5)
+            text(c, "Sport", x + 36, y + 136, font("b", 27, 600), "ink", k)
+            text(c, "entfällt", x + 36 + tw("Sport ", font("b", 27, 600)), y + 136, font("b", 27, 600), "red", k * gone)
+            qcells(c, t, b[2] + 0.3, x + 280, y + 115, [1, 1, 1, 1], "sp", cw=80, ch=40, gap=12, a=k * (1 - 0.7 * gone))
+            gk = ez(t, b[2] + 5.6, 0.5)
+            text(c, "+ Grundkurse", x + 36, y + 206, font("b", 27, 600), "gkline", k * gk)
+            if gk > 0:
+                qcells(c, t, b[2] + 5.8, x + 280, y + 185, [1, 1, 1, 1], "gkline", cw=80, ch=40, gap=12, a=k * gk)
+            pk = ez(t, b[2] + 3.4, 0.5)
+            text(c, "40 Kurse bleiben Pflicht", x + 36, y + 296, font("d", 40, 750), "navy", k * pk)
+            check(c, x + w - 64, y + 284, 34, "green", k * pk, 5, ez(t, b[2] + 3.9, 0.5))
+        # Sporttheorie
+        k = ez(t, b[3] - 0.1, 0.6)
+        if k > 0:
+            x, y, w, h = 1080, 726, 720, 240
+            card(c, x, y, w, h, k, "sp")
+            text(c, "Sporttheorie", x + 36, y + 64, font("d", 38, 700), "ink", k)
+            para(c, "nur bei Sport als 4. PF oder 5. PK", x + 36, y + 112, font("b", 25, 450), 300, 32, "ink2", k)
+            qcells(c, t, b[3] + 1.0, x + 360, y + 150, [0, 0, 1, 1], "sp", cw=70, ch=42, gap=12, labels=True, a=k)
         c.restore()
-    k = ez(t, b[1] + 2.0, 0.5)
-    if k > 0:
-        text(c, "Ballspiele", 120, 660, font("b", 30, 500), "ink2", k)
-        for j in range(3):
-            filled = j < 2
-            ball(c, 300 + j * 50, 650, 16, "orange" if filled else "line", k)
-        text(c, "2 von max. 3", 450, 660, font("b", 30, 650), "ink", k)
-        text(c, "gleicher Kurs höchstens 2-mal", 120, 712, font("b", 28, 450), "ink3", ez(t, b[1] + 4.2, 0.5))
-    # Sporttheorie
-    k = ez(t, b[2] - 0.1, 0.5)
-    if k > 0:
-        card(c, 120, 770, 900, 180, k, "sport")
-        text(c, "Sporttheorie", 160, 830, font("d", 40, 700), "ink", k)
-        text(c, "nur bei Sport als 4. PF oder 5. PK", 160, 878, font("b", 27, 450), "ink2", k)
-        qcells(c, t, b[2] + 1.0, 690, 820, [0, 0, 1, 1], "sport", cw=66, ch=46, gap=10, labels=True, a=k)
     # Zusatzkurse
-    k = ez(t, b[3] - 0.1, 0.6)
+    k = ez(t, b[4] + 0.1, 0.6)
     if k > 0:
-        x, y = 1080, 380
-        card(c, x, y, 720, 570, k, "zk")
-        text(c, "Zusatzkurse", x + 40, y + 70, font("d", 44, 700), "ink", k)
-        end = chips_flow(c, t, b[3] + 0.5, x + 40, y + 105, 640,
-                         ["Astronomie", "Kreatives Schreiben", "TOEFL", "Debating", "Chor", "Big Band", "Studium und Beruf", "Relativitätstheorie"],
-                         "zk", 25, gapx=10, gapy=12, stagger=0.12)
-        r1 = ez(t, b[3] + 2.6, 0.5)
-        check(c, x + 58, end + 52, 26, "green", r1, 4, r1)
-        text(c, "zählen zu deinen Kursen", x + 90, end + 62, font("b", 29, 550), "ink", r1)
-        r2 = ez(t, b[3] + 5.4, 0.5)
-        circle(c, x + 58, end + 112, 15, "orange", r2, 3.5)
-        text(c, "!", x + 58, end + 122, font("d", 26, 700), "orange", r2, "c")
-        para(c, "einbringen nur mit mind. 2 regulären Kursen im passenden Fach", x + 90, end + 122, font("b", 29, 550), 590, 38, "ink", r2)
+        x, y = 120, 380 + (1 - k) * 30
+        card(c, x, y, 1680, 450, k, "zk")
+        text(c, "Zusatzkurse", x + 44, y + 76, font("d", 46, 700), "ink", k)
+        end = chips_flow(c, t, b[4] + 0.5, x + 44, y + 118, 1580,
+                         ["Astronomie", "Kreatives Schreiben", "TOEFL", "Debating", "Chor", "Big Band", "Studium und Beruf",
+                          "Textiles Gestalten", "Relativitätstheorie"], "zk", 28, gapx=14, gapy=14, stagger=0.12)
+        r1 = ez(t, b[4] + 2.6, 0.5)
+        check(c, x + 64, end + 70, 30, "green", r1, 4.5, r1)
+        text(c, "zählen zu deinen Kursen, also zu den 40 Kursen und 66 Stunden", x + 104, end + 81, font("b", 31, 550), "ink", r1)
+        r2 = ez(t, b[4] + 5.4, 0.5)
+        circle(c, x + 64, end + 148, 17, "orange", r2, 3.5)
+        text(c, "!", x + 64, end + 159, font("d", 28, 700), "orange", r2, "c")
+        text(c, "ins Abitur einbringen nur mit mindestens 2 regulären Kursen im passenden Fach", x + 104, end + 159,
+             font("b", 31, 550), "ink", r2)
 
 
-EX_ROWS = [
-    ("Mathematik", "lk", "1. LK", [1, 1, 1, 1]), ("Englisch", "lk", "2. LK", [1, 1, 1, 1]),
-    ("Geschichte", "blue", "3. PF", [1, 1, 1, 1]), ("Biologie", "blue", "4. PF", [1, 1, 1, 1]),
-    ("Bildende Kunst", "pk", "5. PK", [1, 1, 1, 1]), ("Deutsch", "blue", "", [1, 1, 1, 1]),
-    ("Chemie", "blue", "", [1, 1, 1, 1]), ("Philosophie", "blue", "", [1, 1, 1, 1]),
-    ("Politikwiss.", "blue", "", [0, 0, 1, 1]), ("Kreatives Schreiben", "zk", "ZK", [1, 1, 0, 0]),
-    ("Sport", "sport", "", [1, 1, 1, 1]),
+EX = [
+    ("Mathematik", "1. LK", "lk", [1, 1, 1, 1]), ("Englisch", "2. LK", "lk", [1, 1, 1, 1]),
+    ("Geschichte", "3. PF", "pf", [1, 1, 1, 1]), ("Biologie", "4. PF", "pf", [1, 1, 1, 1]),
+    ("Bildende Kunst", "5. PK", "pk", [1, 1, 1, 1]), ("Deutsch", "GK", "gk", [1, 1, 1, 1]),
+    ("Chemie", "GK", "gk", [1, 1, 1, 1]), ("Philosophie", "GK", "gk", [1, 1, 1, 1]),
+    ("Politikwiss.", "GK", "gk", [0, 0, 1, 1]), ("Kreat. Schreiben", "ZK", "zk", [1, 1, 0, 0]),
+    ("Sport", "Sport", "sp", [1, 1, 1, 1]),
 ]
-EX_HOURS = {"lk": 5, "blue": 3, "pk": 3, "zk": 3, "sport": 2}
+EX_HOURS = {"lk": 5, "pf": 3, "pk": 3, "gk": 3, "zk": 3, "sp": 2}
 
 
 def s_umfang(c, t, sc):
@@ -828,7 +1010,7 @@ def s_umfang(c, t, sc):
     fa = ez(t, b[1] - 0.1, 0.6) * (1 - ez(t, b[2] - 0.4, 0.5))
     if fa > 0:
         y = 470
-        parts = [("(", "ink2"), ("LK", "lk"), (" × 5  +  ", "ink2"), ("GK", "blue"), (" × 3  +  ", "ink2"), ("Sport", "sport"),
+        parts = [("(", "ink2"), ("LK", "lk"), (" × 5  +  ", "ink2"), ("GK", "gkline"), (" × 3  +  ", "ink2"), ("Sport", "sp"),
                  (" × 2", "ink2"), (")  ÷  2", "ink2")]
         f = font("d", 58, 600)
         x = 120
@@ -837,44 +1019,37 @@ def s_umfang(c, t, sc):
             text(c, s, x, y, f, cc, fa * k)
             x += tw(s, f)
         text(c, "= Jahreswochenstunden", 120, 550, font("b", 36, 500), "ink2", fa * ez(t, b[1] + 3.6, 0.5))
-        chips = [("LK = 5 Std.", "lk"), ("GK = 3 Std.", "blue"), ("Sport = 2 Std.", "sport")]
         cx = 120
-        for i, (lb, cc) in enumerate(chips):
+        for i, (lb, kind) in enumerate([("LK = 5 Std.", "lk"), ("GK = 3 Std.", "gk"), ("Sport = 2 Std.", "sp")]):
             k = ez(t, b[1] + 0.6 + i * 1.0, 0.4)
-            cx += chip(c, cx, 610, lb, cc, fa * k, 30) + 18
-    # Raster
+            cx += badge(c, cx, 610, lb, kind, fa * k, 28, h=52) + 18
+    # Netzplan der Beispielwahl
+    starts = [b[2] + 0.6 + i * 1.3 if i < 5 else b[3] + 0.3 + (i - 5) * 1.25 for i in range(len(EX))]
     ra = ez(t, b[2] - 0.2, 0.5)
-    count, hours = 0.0, 0.0
     if ra > 0:
-        x0, y0, rh = 120, 360, 52
+        x, y, w, h = 100, 330, 1080, 662
+        card(c, x, y, w, h, ra)
+        rrect(c, x, y, w, h, 14, "mapline", ra, 1.5)
+        map_head(c, x + 36, y + 58, w - 72, ra, ez(t, starts[-1] + 1.4, 0.6), size=34)
+        xs = [x + 560, x + 690, x + 820, x + 950]
+        zone_bands(c, xs, y + 84, y + h - 14, ra, half=54)
+        netz(c, t, EX, starts, x + 36, xs, y + 150, 44, ra, s=0.88)
+    count, hours = 0.0, 0.0
+    for i, (name, lab, kind, cells) in enumerate(EX):
         for qi in range(4):
-            text(c, f"Q{qi + 1}", 640 + qi * 76 + 33, y0 - 10, font("m", 22), "ink3", ra, "c")
-        for i, (name, cc, tag, cells) in enumerate(EX_ROWS):
-            t0 = b[2] + 0.6 + i * 1.3 if i < 5 else b[3] + 0.3 + (i - 5) * 1.25
-            k = ez(t, t0 - 0.15, 0.4)
-            y = y0 + i * rh
-            if k > 0:
-                rrect(c, x0, y, 1000, rh - 8, 10, "card", 0.85 * k)
-                if tag:
-                    f = font("m", 18)
-                    w = tw(tag, f) + 18
-                    rrect(c, x0 + 18, y + 9, w, 26, 6, cc + "_soft" if cc + "_soft" in PAL else "card2", k)
-                    text(c, tag, x0 + 18 + w / 2, y + 28, f, cc, k, "c")
-                text(c, name, x0 + 130, y + 31, font("b", 27, 600), "ink", k)
-                qcells(c, t, t0, 640, y + 6, cells, cc, cw=66, ch=32, gap=10, stagger=0.05, a=k)
-            for qi in range(4):
-                if cells[qi]:
-                    kk = ez(t, t0 + qi * 0.05, 0.35)
-                    count += kk
-                    hours += kk * EX_HOURS[cc] / 2
-        fk = ez(t, b[3] + 8.5, 0.6)
-        text(c, "pro Halbjahr: 10 Kurse  ·  33 Wochenstunden", 120, 975, font("b", 30, 600), "ink2", fk * ra)
+            if cells[qi]:
+                kk = ez(t, starts[i] + 0.35 + qi * 0.12, 0.35)
+                count += kk
+                hours += kk * EX_HOURS[kind] / 2
     # Messwerte
     ma = ez(t, b[0] + 0.3, 0.6)
     if ma > 0:
         x, w = 1240, 560
-        meter(c, t, x, 380, w, "Kurse", count, 40, "blue", ma)
-        meter(c, t, x, 560, w, "Jahreswochenstunden", hours, 66, "blue", ma)
+        meter(c, t, x, 380, w, "Kurse", count, 40, "navy", ma)
+        meter(c, t, x, 560, w, "Jahreswochenstunden", hours, 66, "navy", ma)
+        fk = ez(t, b[3] + 8.5, 0.6) * ra
+        text(c, "pro Halbjahr: 10 Kurse,", x, 922, font("b", 28, 600), "ink2", fk)
+        text(c, "33 Wochenstunden", x, 960, font("b", 28, 600), "ink2", fk)
         k3 = ez(t, b[4] - 0.1, 0.6)
         if k3 > 0:
             v = 19 * ez(t, b[4] + 1.6, 1.4)
@@ -885,7 +1060,7 @@ def s_umfang(c, t, sc):
             rrect(c, x, 836, w, 14, 7, "line", k3)
             if v > 0:
                 rrect(c, x, 836, max(14, w * v / 24), 14, 7, "green", k3)
-            rrect(c, x + w * 24 / 24 - 3, 828, 3, 30, 1.5, "orange", k3)
+            rrect(c, x + w - 3, 828, 3, 30, 1.5, "orange", k3)
 
 
 def s_abgabe(c, t, sc):
@@ -904,7 +1079,7 @@ def s_abgabe(c, t, sc):
             x, y = 1250 + i * 190, 250
             act = (i == active) and t > b[1] - 0.2
             circle(c, x, y, 62 * clamp(k), "blue_soft" if act else "card", 1)
-            circle(c, x, y, 62 * clamp(k), "blue" if act else "line", 1, 3)
+            circle(c, x, y, 62 * clamp(k), "navy" if act else "strong", 1, 5 if act else 3.5)
             if i == 0:
                 magnifier(c, x, y, 66, "ink", clamp(k))
             elif i == 1:
@@ -914,7 +1089,7 @@ def s_abgabe(c, t, sc):
                 lock(c, x, y + 8, 56, "ink", clamp(k), 0)
             text(c, lab, x, y + 104, font("b", 27, 600), "ink" if act else "ink2", clamp(k), "c")
             if i < 2:
-                line(c, x + 76, y, x + 114, y, "line", clamp(k), 3)
+                line(c, x + 70, y, x + 120, y, "navy", clamp(k), 10)
         # Planer-Prüfung
         k = ez(t, b[1] - 0.1, 0.6)
         if k > 0:
@@ -1054,7 +1229,7 @@ def srt():
         info = BEATS[sc.id]
         ends = sc.b[1:] + [sc.audio_end]
         for bt, (t0, t1) in enumerate(zip(sc.b, ends)):
-            txt = s["beats"][bt].replace("Q eins", "Q1").replace("Q zwei", "Q2").replace("Q drei", "Q3").replace("Q vier", "Q4")
+            txt = s["beats"][bt].replace("Q eins", "Q1").replace("Q zwei", "Q2").replace("Q drei", "Q3").replace("Q vier", "Q4").replace("sechsundzwanzig siebenundzwanzig", "2026/27")
             sents = [x for x in re.split(r"(?<=[.!?])\s+", txt) if x]
             tot = sum(len(x) for x in sents)
             cur = t0 + 0.05

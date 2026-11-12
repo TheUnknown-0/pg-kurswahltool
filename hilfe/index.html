@@ -194,6 +194,13 @@ section.block{background:var(--paper);border-radius:12px;box-shadow:var(--shadow
 
 /* Sport */
 .sports{display:flex;flex-wrap:wrap;gap:6px}
+.neu{display:inline-block;background:var(--red);color:#fff;border-radius:5px;padding:0 6px;margin-right:6px;font-size:.74rem;font-weight:750;line-height:1.5;white-space:nowrap}
+.sport-ex{display:grid;gap:8px;margin:14px 0 4px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.sx{display:grid;grid-template-columns:7.6em auto minmax(0,1fr);gap:6px 12px;align-items:center;font-size:.88rem}
+.sx .v{font-weight:750}.sx.ok .v{color:var(--green)}.sx.bad .v{color:var(--red)}
+.sx .cs{display:flex;gap:4px}.sx .cs .rchip{min-width:2.6em;text-align:center}
+.sx.bad .cs .x{outline:2px solid var(--red);outline-offset:1px}
+.sx small{color:var(--ink-2);font-size:.84rem}
 .sports span{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 3px;border-radius:7px;background:var(--paper-2);border:1px solid var(--line);font-size:.86rem}
 .sports .rchip{font-size:.72rem;min-width:2.7em;text-align:center}
 
@@ -243,6 +250,7 @@ footer{margin-top:36px;color:var(--ink-3);font-size:.88rem;display:grid;gap:6px;
   .route li p{grid-column:2;padding-top:0}
   .duty-row{grid-template-columns:minmax(0,1fr) 190px}
   .duty-row small{grid-column:1 / -1}
+  .sx{grid-template-columns:minmax(0,1fr)}
   .duty svg{width:190px}
   .duty-row.head > :last-child{display:none}
   .halves{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -300,7 +308,7 @@ footer{margin-top:36px;color:var(--ink-3);font-size:.88rem;display:grid;gap:6px;
 
   <main>
     <section class="block" id="video">
-      <div class="block-head"><div class="num play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5v13l11-6.5z"/></svg></div><h2>Die Kurswahl in fünf Minuten</h2>
+      <div class="block-head"><div class="num play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5v13l11-6.5z"/></svg></div><h2>Die Kurswahl in fünfeinhalb Minuten</h2>
         <p class="hint">Das Erklärvideo geht alles einmal der Reihe nach durch: Ausgangslage, Leistungskurse, Prüfungsfächer, Belegpflichten, Sport, Nachrechnen und Abgabe.</p></div>
       <div class="block-body">
         <div class="video-wrap">
@@ -316,205 +324,285 @@ footer{margin-top:36px;color:var(--ink-3);font-size:.88rem;display:grid;gap:6px;
       <script type="text/vtt" id="kw-vtt">
 WEBVTT
 
+1
 00:01.890 --> 00:04.451
 Die Kurswahl für die Qualifikationsphase.
 
+2
 00:04.501 --> 00:09.100
 Klingt erst mal kompliziert, ist mit dem richtigen Plan aber gut machbar.
 
+3
 00:09.450 --> 00:12.428
 Vor dir liegen vier Halbjahre: Q1 bis Q4.
 
+4
 00:12.478 --> 00:18.040
 In dieser Zeit sammelst du die Kurse, aus denen später dein Abitur entsteht.
 
+5
 00:18.390 --> 00:25.740
 Du wählst zwei Leistungskurse, insgesamt fünf Prüfungskomponenten und mindestens vierzig Kurse.
 
+6
 00:26.090 --> 00:31.600
 In diesem Video gehen wir das Schritt für Schritt durch: von deiner Ausgangslage bis zur abgegebenen Wahl.
 
+7
 00:34.290 --> 00:36.467
 Schritt eins: deine Ausgangslage.
 
+8
 00:36.517 --> 00:40.380
 Sie entscheidet, welche Fächer du überhaupt wählen darfst.
 
+9
 00:40.730 --> 00:45.116
 Wichtig sind deine Fremdsprachen, und seit welcher Klasse du sie lernst.
 
+10
 00:45.166 --> 00:52.200
 Eine Sprache, die du erst in Klasse zehn begonnen hast, kann kein Leistungskurs sein und läuft bis zum Ende weiter.
 
+11
 00:52.550 --> 00:55.191
 Dann dein Wahlpflichtfach aus Klasse zehn.
 
+12
 00:55.241 --> 01:02.240
 Informatik, Sozialwissenschaften und Darstellendes Spiel kannst du nur wählen, wenn du sie dort schon hattest.
 
+13
 01:02.590 --> 01:05.512
 Und zum Schluss: Warst du in der Ruder-AG?
 
+14
 01:05.562 --> 01:09.900
 Oder hast du ein Attest, das dich dauerhaft vom Sport befreit?
 
+15
 01:12.630 --> 01:15.308
 Schritt zwei: die beiden Leistungskurse.
 
+16
 01:15.358 --> 01:21.240
 Sie laufen alle vier Halbjahre mit fünf Stunden pro Woche und zählen im Abitur doppelt.
 
+17
 01:21.590 --> 01:24.810
 Für den ersten Leistungskurs gilt eine strenge Regel.
 
+18
 01:24.860 --> 01:32.400
 Er muss Deutsch, Mathematik, eine Naturwissenschaft oder eine Fremdsprache sein, die du spätestens seit Klasse neun lernst.
 
+19
 01:32.750 --> 01:43.540
 Beim zweiten Leistungskurs ist mehr möglich: zusätzlich Musik, Kunst, Geschichte, Politikwissenschaft, Geografie, Informatik oder Sozialwissenschaften.
 
+20
 01:43.890 --> 01:46.480
 Und bilinguale Kurse gibt es nur als Grundkurs.
 
+21
 01:49.190 --> 01:54.660
 Schritt drei: das dritte und vierte Prüfungsfach, und die fünfte Prüfungskomponente.
 
+22
 01:55.010 --> 02:02.280
 Unter deinen vier Prüfungsfächern müssen mindestens zwei aus Deutsch, Mathematik und Fremdsprache sein.
 
+23
 02:02.630 --> 02:11.480
 Alle fünf Komponenten zusammen decken die drei Aufgabenfelder ab: das sprachliche, das gesellschaftswissenschaftliche und das naturwissenschaftliche.
 
+24
 02:11.830 --> 02:16.360
 Und alle fünf belegst du durchgehend, von Q1 bis Q4.
 
+25
 02:16.710 --> 02:22.671
 Bei der fünften Komponente wählst du zwischen Präsentationsprüfung und Besonderer Lernleistung.
 
+26
 02:22.721 --> 02:27.860
 Bei der Präsentationsprüfung muss das Referenzfach ein eigenes, fünftes Fach sein.
 
-02:30.590 --> 02:32.918
+27
+02:30.310 --> 02:32.487
 Schritt vier: die Belegpflichten.
 
-02:32.968 --> 02:36.520
+28
+02:32.537 --> 02:35.860
 Diese Kurse brauchst du, ganz egal, was du prüfst.
 
-02:36.870 --> 02:39.157
+29
+02:36.210 --> 02:38.514
 Deutsch und Mathematik durchgehend.
 
-02:39.208 --> 02:41.161
+30
+02:38.564 --> 02:40.532
 Eine Fremdsprache durchgehend.
 
-02:41.211 --> 02:43.766
+31
+02:40.582 --> 02:43.155
 Und eine Naturwissenschaft durchgehend.
 
-02:43.816 --> 02:48.040
+32
+02:43.205 --> 02:47.460
 Ist das nur Biologie, kommen zwei Kurse Physik oder Chemie dazu.
 
-02:48.390 --> 02:52.053
+33
+02:47.810 --> 02:51.940
 Dazu ein gesellschaftswissenschaftliches Fach durchgehend.
 
-02:52.103 --> 02:56.151
+34
+02:51.990 --> 02:56.553
 Ist das Geschichte, kommt Politikwissenschaft in Q3 und Q4 dazu.
 
-02:56.201 --> 02:58.520
-Sonst ist es Geschichte in Q3 und Q4.
+35
+02:56.603 --> 03:04.120
+Sonst kommt Geschichte dazu, und zwar neu ab dem Schuljahr 2026/27 in Q1 und Q2, nicht mehr in Q3 und Q4.
 
-02:58.870 --> 03:03.040
+36
+03:04.470 --> 03:07.680
 Außerdem zwei Kurse Musik, Kunst oder Darstellendes Spiel.
 
-03:03.390 --> 03:08.880
+37
+03:08.030 --> 03:13.040
 Grundkurse belegst du dabei immer im Block: Q1 und Q2, oder Q3 und Q4.
 
-03:11.570 --> 03:15.120
+38
+03:15.490 --> 03:18.460
 Schritt fünf: Sport und Zusatzkurse.
 
-03:15.470 --> 03:18.293
+39
+03:18.810 --> 03:21.380
 In jedem Halbjahr wählst du einen Sportkurs.
 
-03:18.343 --> 03:24.300
-Höchstens drei davon dürfen Ballspiele sein, und denselben Kurs nimmst du höchstens zweimal.
+40
+03:21.430 --> 03:28.703
+Höchstens drei davon dürfen Ballspiele sein, und zwei davon dürfen dieselbe Sportart sein, zum Beispiel zweimal Volleyball.
 
-03:24.650 --> 03:31.120
+41
+03:28.753 --> 03:34.240
+Mindestens ein Kurs kommt also aus einem anderen Bereich, etwa Schwimmen oder Leichtathletik.
+
+42
+03:34.590 --> 03:38.224
+Bist du per Attest vom Sport befreit, fallen die Sportkurse weg.
+
+43
+03:38.274 --> 03:40.469
+Die vierzig Kurse brauchst du trotzdem.
+
+44
+03:40.519 --> 03:43.060
+Die Lücke füllst du mit weiteren Grundkursen.
+
+45
+03:43.410 --> 03:49.760
 Ist Sport dein viertes Prüfungsfach oder deine fünfte Komponente, kommen zwei Kurse Sporttheorie dazu.
 
-03:31.470 --> 03:35.831
+46
+03:50.110 --> 03:54.570
 Zusatzkurse wie Astronomie oder Kreatives Schreiben zählen zu deinen Kursen.
 
-03:35.881 --> 03:42.100
+47
+03:54.620 --> 04:00.980
 Ins Abitur einbringen kannst du sie aber nur, wenn du im passenden Fach mindestens zwei reguläre Kurse hast.
 
-03:44.770 --> 03:46.049
+48
+04:03.650 --> 04:04.929
 Jetzt wird gerechnet.
 
-03:46.099 --> 03:51.620
+49
+04:04.979 --> 04:10.500
 Du brauchst mindestens vierzig Kurse und mindestens sechsundsechzig Jahreswochenstunden.
 
-03:51.970 --> 03:56.932
+50
+04:10.850 --> 04:15.812
 Ein Leistungskurs bringt fünf Stunden, ein Grundkurs drei, Sport zwei.
 
-03:56.982 --> 04:00.440
+51
+04:15.862 --> 04:19.320
 Alles zusammenzählen, und dann durch zwei teilen.
 
-04:00.790 --> 04:04.261
+52
+04:19.670 --> 04:23.141
 Ein Beispiel: Mathe und Englisch als Leistungskurse.
 
-04:04.311 --> 04:08.390
+53
+04:23.191 --> 04:27.270
 Geschichte und Biologie als drittes und viertes Prüfungsfach.
 
-04:08.440 --> 04:10.760
+54
+04:27.320 --> 04:29.640
 Und Kunst als Präsentationsprüfung.
 
-04:11.110 --> 04:17.160
+55
+04:29.990 --> 04:36.040
 Dazu Deutsch, Chemie, Philosophie, Politik im zweiten Jahr, ein Zusatzkurs und Sport.
 
-04:17.210 --> 04:21.466
+56
+04:36.090 --> 04:40.346
 Das sind zehn Kurse und dreiunddreißig Stunden pro Halbjahr.
 
-04:21.516 --> 04:25.700
+57
+04:40.396 --> 04:44.580
 Also genau vierzig Kurse und genau sechsundsechzig Stunden.
 
-04:26.050 --> 04:31.681
+58
+04:44.930 --> 04:50.561
 Eine Grenze gibt es noch: Höchstens vierundzwanzig Grundkurse dürfen einbringpflichtig sein.
 
-04:31.731 --> 04:33.040
+59
+04:50.611 --> 04:51.920
 Hier sind es neunzehn.
 
-04:35.730 --> 04:39.680
+60
+04:54.610 --> 04:58.560
 Zum Schluss: prüfen, beraten, abgeben.
 
-04:40.030 --> 04:43.207
+61
+04:58.910 --> 05:02.087
 Der Kurswahl-Planer prüft deine Wahl sofort.
 
-04:43.257 --> 04:44.747
+62
+05:02.137 --> 05:03.627
 Rot musst du beheben.
 
-04:44.797 --> 04:48.780
+63
+05:03.677 --> 05:07.660
 Orange besprichst du mit dem Pädagogischen Koordinator.
 
-04:49.130 --> 04:51.352
+64
+05:08.010 --> 05:10.232
 Nimm deine Wahl mit zur Beratung.
 
-04:51.402 --> 04:54.588
+65
+05:10.282 --> 05:13.468
 Wenn alles passt, klickst du auf: Wahl abgeben.
 
-04:54.638 --> 04:56.240
+66
+05:13.518 --> 05:15.120
 Danach ist sie gesperrt.
 
-04:56.590 --> 05:04.400
+67
+05:15.470 --> 05:23.280
 Drucke dein Kurswahlformular in Originalgröße aus, gib es rechtzeitig ab, und denk an den Kurswahlbogen im Lernraum.
 
-05:04.750 --> 05:07.364
+68
+05:23.630 --> 05:26.244
 Alle Regeln findest du noch einmal im Leitfaden.
 
-05:07.414 --> 05:09.140
+69
+05:26.294 --> 05:28.020
 Viel Erfolg bei deiner Kurswahl!
-
       </script>
       <script>
       (function(){
-        var CH=[[0,'Einführung'],[33,'Ausgangslage'],[71.5,'Leistungskurse'],[108,'Prüfungsfächer und 5. PK'],[149.5,'Belegpflichten'],[190.5,'Sport und Zusatzkurse'],[223.7,'Nachrechnen'],[274.6,'Prüfen und abgeben']];
+        var CH=[[0,'Einführung'],[32.9,'Ausgangslage'],[71.2,'Leistungskurse'],[107.8,'Prüfungsfächer und 5. PK'],[149.2,'Belegpflichten'],[194.3,'Sport und Zusatzkurse'],[242.3,'Nachrechnen'],[293.2,'Prüfen und abgeben']];
         var v=document.getElementById('kw-video'), list=document.getElementById('chapters');
         // Untertitel liegen in der Seite (VTT-Dateien werden nicht ausgeliefert) und kommen als Blob-Spur dazu
         try{
@@ -646,7 +734,7 @@ Viel Erfolg bei deiner Kurswahl!
         <div class="side-note">
           <p><b>Einbringen.</b> Ins Abitur zählen alle 8 LK-Kurse und genau 24 Grundkurse. Einbringpflichtig sind vor allem das 3. und 4. Prüfungsfach, Deutsch, Mathematik, die Pflicht-Fremdsprache und die Pflicht-Naturwissenschaft, soweit sie Grundkurse sind.</p>
           <p>Sind das schon mehr als 24, ist die Wahl ungültig. Bleibt Platz, wählst du die restlichen Grundkurse später selbst.</p>
-          <p><b>Sportattest?</b> Ohne Sport-Praxis sinkt die Mindestzahl auf 39 Kurse; der Rechner berücksichtigt das.</p>
+          <p><b>Sportattest?</b> Die Sport-Praxis entfällt, die Mindestzahl bleibt aber bei 40 Kursen. Die fehlenden Kurse ergänzt du mit weiteren Grundkursen.</p>
         </div>
       </div>
     </section>
@@ -674,10 +762,16 @@ Viel Erfolg bei deiner Kurswahl!
         <div class="panel sp">
           <h3>Sportpraxis</h3>
           <div class="sports" id="sports"></div>
+          <div class="sport-ex" aria-label="Beispiele für die Ballspiel-Regel">
+            <div class="sx ok"><span class="v">✓ gültig</span><span class="cs"><b class="rchip sp">B7</b><b class="rchip sp">B1</b><b class="rchip sp">B7</b><b class="rchip gk">E1</b></span><small>3 Ballspiele, Volleyball zweimal</small></div>
+            <div class="sx bad"><span class="v">✗ nicht gültig</span><span class="cs"><b class="rchip sp x">B7</b><b class="rchip sp x">B1</b><b class="rchip sp x">B3</b><b class="rchip sp x">B8</b></span><small>4 Ballspiele</small></div>
+            <div class="sx bad"><span class="v">✗ nicht gültig</span><span class="cs"><b class="rchip sp x">B7</b><b class="rchip sp x">B7</b><b class="rchip sp x">B7</b><b class="rchip gk">A1</b></span><small>dreimal derselbe Kurs</small></div>
+          </div>
           <ul class="check-list">
             <li>In jedem Halbjahr ein Kurs, das Angebot wechselt je Halbjahr.</li>
-            <li>Höchstens <b>drei Ballspiel-Kurse</b> (Kürzel B), mindestens einer aus einem anderen Bewegungsfeld.</li>
-            <li>Derselbe Kurs höchstens zweimal, und zweimal nur mit anderen Inhalten oder höherer Leistungsstufe.</li>
+            <li>Höchstens <b>drei Ballspiel-Kurse</b> (Kürzel B), also mindestens einer aus einem anderen Bewegungsfeld.</li>
+            <li>Zwei davon dürfen <b>dieselbe Sportart</b> sein, z. B. zweimal Volleyball. Öfter als zweimal geht derselbe Kurs nicht, und zweimal nur mit anderen Inhalten oder höherer Leistungsstufe.</li>
+            <li>Vom Sport befreit (Attest)? Dann entfällt die Sportpraxis, du brauchst aber trotzdem <b>mindestens 40 Kurse</b>.</li>
             <li>Rudern setzt mindestens ein Jahr Ruder-AG und die Mitgliedschaft im Schüler-Ruder-Verband voraus.</li>
           </ul>
         </div>
@@ -820,9 +914,10 @@ Viel Erfolg bei deiner Kurswahl!
     ['2. Fremdsprache ab Kl. 8/9',[1,1,0,0],'var(--blue)','nur wenn du lediglich eine Sprache seit Klasse 5 bis 7 lernst'],
     ['Eine Naturwissenschaft',[1,1,1,1],'var(--blue)','Physik, Chemie oder Biologie. Nur Biologie? Dann zusätzlich Physik oder Chemie in einem Block.'],
     ['Ein Fach aus AF II',[1,1,1,1],'var(--blue)','Geschichte, Politik, Geografie, Philosophie oder Sozialwissenschaften'],
-    ['Geschichte oder Politik',[0,0,1,1],'var(--blue)','Ist Geschichte durchgängig: Politik in Q3+Q4. Sonst Geschichte in Q3+Q4.'],
+    ['Politik, wenn Geschichte durchgängig',[0,0,1,1],'var(--blue3)','Ist dein durchgängiges AF-II-Fach Geschichte, kommt Politikwissenschaft in Q3+Q4 dazu.'],
+    ['Geschichte, wenn ein anderes Fach durchgängig',[1,1,0,0],'var(--blue3)','<span class="neu">neu ab 2026/27</span>Geschichte in Q1+Q2 (bisher Q3+Q4).'],
     ['Musik, Kunst oder DS',[1,1,0,0],'var(--bll)','zwei Kurse, Q1+Q2 oder Q3+Q4; entfällt bei neuer Fremdsprache ab Kl. 10'],
-    ['Sport',[1,1,1,1],'var(--orange-line)','ein Praxiskurs je Halbjahr; mit Attest entfällt Sport (dann 39 Kurse)']
+    ['Sport',[1,1,1,1],'var(--orange-line)','ein Praxiskurs je Halbjahr; mit Attest entfällt Sport, 40 Kurse brauchst du trotzdem']
   ];
   function lineDiagram(s,c){
     var xs=[18,72,138,192];
@@ -846,7 +941,7 @@ Viel Erfolg bei deiner Kurswahl!
   }
   function calc(){
     var lk=num(inLk,8), gk=num(inGk,60), sp=num(inSp,4);
-    stamp('k',lk+gk+sp,sp===0?39:40,'Kurse');
+    stamp('k',lk+gk+sp,40,'Kurse');
     stamp('h',(lk*5+gk*3+sp*2)/2,66,'Std.');
   }
   [inLk,inGk,inSp].forEach(function(e){e.addEventListener('input',calc);});
@@ -871,6 +966,8 @@ Viel Erfolg bei deiner Kurswahl!
     ['Zu viele Pflicht-Grundkurse','Mehr als 24 einbringpflichtige Grundkurse machen die Wahl ungültig.'],
     ['Biologie als einzige Naturwissenschaft','Dann fehlt fast immer der zusätzliche Block Physik oder Chemie.'],
     ['Einzelnes Halbjahr gewählt','Grundkurse gibt es nur als Q1+Q2 oder Q3+Q4.'],
+    ['Geschichte nach altem Schema','Ab dem Schuljahr 2026/27 liegt die zusätzliche Geschichte in Q1+Q2, nicht mehr in Q3+Q4.'],
+    ['Sportattest heißt nicht weniger Kurse','Auch mit Sportbefreiung brauchst du mindestens 40 Kurse. Die Sportkurse ersetzt du durch Grundkurse.'],
     ['Psychologie als Prüfungsfach','Psychologie läuft nur in Q1+Q2 und kann kein Prüfungsfach sein.'],
     ['Wahlpflichtfach nicht angegeben','Informatik, Sozialwissenschaften und Darstellendes Spiel setzen das Wahlpflichtfach aus Klasse 10 voraus.']
   ];
@@ -884,8 +981,8 @@ Viel Erfolg bei deiner Kurswahl!
     'Alle drei Aufgabenfelder unter den fünf Prüfungskomponenten',
     'Alle fünf Prüfungskomponenten in Q1 bis Q4 belegt',
     'Belegpflichten erfüllt (Deutsch, Mathe, Fremdsprache, Naturwissenschaft, AF II, Kunst/Musik/DS)',
-    'Vier Sportkurse gewählt, höchstens drei Ballspiele',
-    'Mindestens 40 Kurse und 66 Jahreswochenstunden',
+    'Vier Sportkurse gewählt: höchstens drei Ballspiele, kein Kurs öfter als zweimal',
+    'Mindestens 40 Kurse und 66 Jahreswochenstunden, auch bei Sportbefreiung',
     'Keine rote Meldung mehr im Planer',
     'Orange Hinweise mit dem Päko besprochen',
     'Im Planer „Wahl abgeben“ geklickt',

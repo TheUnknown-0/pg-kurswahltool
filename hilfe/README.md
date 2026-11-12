@@ -2,12 +2,14 @@
 
 Eigenständige Hilfeseite zur Kurswahl der Qualifikationsphase, vorerst getrennt vom Kurswahl-Planer
 (nicht im Tool verlinkt). Die Regeln entsprechen der Prüfung im Planer (`public/assets/planer.js`,
-VO-GO Berlin §§ 23, 25, 26). Inoffiziell: Verbindlich sind die Vorgaben der Schule und die Beratung durch den Päko.
+VO-GO Berlin §§ 23, 25, 26), mit zwei Neuerungen ab dem Schuljahr 2026/27, die der Planer noch nicht prüft:
+Die zusätzliche Geschichte liegt in Q1+Q2 (bisher Q3+Q4), und auch mit Sportbefreiung sind mindestens 40 Kurse
+Pflicht (bisher 39). Inoffiziell: Verbindlich sind die Vorgaben der Schule und die Beratung durch den Päko.
 
 | Datei | Inhalt |
 |---|---|
-| `index.html` | Leitfaden im Design des Planers: Erklärvideo mit Kapiteln, Ablauf, Begriffe, Fächertabelle, Prüfungsregeln, Belegpflichten, Rechner, Beispielwahl, Stolperfallen, Checkliste. Läuft ohne Server direkt im Browser. |
-| `kurswahl-video.mp4` | Erklärvideo, 5:15 Min., 1080p, Web-Fassung (13,8 MB) |
+| `index.html` | Leitfaden im Design des Planers mit Netzplan der Beispielwahl: Erklärvideo mit Kapiteln, Ablauf, Begriffe, Fächertabelle, Prüfungsregeln, Belegpflichten, Rechner, Beispielwahl, Stolperfallen, Checkliste. Läuft ohne Server direkt im Browser. |
+| `kurswahl-video.mp4` | Erklärvideo im Netzplan-Stil, 5:34 Min., 1080p, Web-Fassung (13,1 MB) |
 | `kurswahl-video-poster.jpg` | Vorschaubild des Videos |
 | `kurswahl-video.srt`, `.vtt` | Deutsche Untertitel (in `index.html` zusätzlich eingebettet) |
 | `video-quellen/` | Drehbuch und Skripte, aus denen das Video entstanden ist |
