@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\HttpException;
 use App\Services\AdminLog;
 use App\Services\Deadline;
+use App\Services\HilfeSetting;
 use App\Services\LoginName;
 use App\Services\LoginThrottle;
 use App\Services\UpdateCheck;
@@ -19,7 +20,7 @@ final class AuthController extends Controller
             return $this->redirect($this->ctx->auth->isAdmin() ? '/admin' : '/');
         }
 
-        return $this->ctx->view->render('login', ['title' => 'Anmelden', 'error' => null, 'login' => '']);
+        return $this->page(null, '');
     }
 
     public function login(): string
@@ -39,10 +40,10 @@ final class AuthController extends Controller
         if ($user === null || $user['password_hash'] === null || !password_verify($password, $hash)) {
             $throttle->recordFailure($login, $ip);
 
-            return $this->ctx->view->render('login', ['title' => 'Anmelden', 'error' => 'Login oder Passwort ist falsch.', 'login' => $login]);
+            return $this->page('Login oder Passwort ist falsch.', $login);
         }
         if ($user['role'] === 'student' && (new Deadline($this->ctx->db))->loginBlocked()) {
-            return $this->ctx->view->render('login', ['title' => 'Anmelden', 'error' => 'Die Abgabefrist ist abgelaufen. Die Anmeldung ist geschlossen.', 'login' => $login]);
+            return $this->page('Die Abgabefrist ist abgelaufen. Die Anmeldung ist geschlossen.', $login);
         }
         if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT)) {
             $this->ctx->db->run('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $user['id']]);
@@ -58,6 +59,14 @@ final class AuthController extends Controller
         }
 
         return $this->redirect($user['role'] === 'admin' ? '/admin' : '/');
+    }
+
+    private function page(?string $error, string $login): string
+    {
+        return $this->ctx->view->render('login', [
+            'title' => 'Anmelden', 'error' => $error, 'login' => $login,
+            'hilfeOeffentlich' => (new HilfeSetting($this->ctx->db))->isPublic(),
+        ]);
     }
 
     public function logout(): string

@@ -124,10 +124,10 @@ php bin/worker.php                                     # Hintergrund-Import
 ## Aufbau
 
 - `public/index.php`: Front-Controller; `public/planer.html` + `public/assets/planer.js`: der Planer.
-- `/hilfe` (ohne Anmeldung): Hilfe zur Kurswahl mit Erklärvideo; Seite in `templates/hilfe.html`,
+- `/hilfe`: Hilfe zur Kurswahl mit Erklärvideo, standardmäßig nur nach Anmeldung (unter „Einstellungen“ für alle freigebbar); Seite in `templates/hilfe.html`,
   Skript und Medien in `public/assets/hilfe/`, Quellen des Videos in `tools/hilfe-video/`.
 - `src/`: schlankes MVC nach dem Vorbild von *berufsmesse* (`Core/`, `Controllers/`, `Services/`).
 - `src/Services/SchoolPdf.php`: liest Name, Klasse, Jahrgang, IDs und Kreuze aus einer Schul-PDF.
 - `bin/worker.php`: Hintergrund-Import, `bin/migrate.php`: Migrationen (laufen beim Start).
 - `tools/`: Formularvorlage für Konten ohne PDF (`build_form_template.py`), zlib-ng als WebAssembly,
-  `test_form.js` (byte-genauer Nachbau einer Schul-PDF).
+  `test_form.js` (byte-genauer Nachbau einer Schul-PDF), `test_regeln.js` (Regeltests des Planers: `node tools/test_regeln.js`).

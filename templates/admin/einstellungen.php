@@ -22,4 +22,16 @@
     </form>
   </section>
 
+  <section class="card" id="hilfe">
+    <h2>Hilfeseite</h2>
+    <p class="muted small">Die <a href="<?= e($ctx->url('/hilfe')) ?>">Hilfe zur Kurswahl</a> mit Erklärvideo ist
+      <b><?= $hilfeOeffentlich ? 'für alle erreichbar' : 'nur nach Anmeldung erreichbar' ?></b>.
+      Freigegeben steht der Link auch auf der Anmeldeseite.</p>
+    <form method="post" action="<?= e($ctx->url('/admin/settings/hilfe')) ?>" class="narrow">
+      <?= $csrf->field() ?>
+      <input type="hidden" name="oeffentlich" value="<?= $hilfeOeffentlich ? '0' : '1' ?>">
+      <p><button class="btn primary" type="submit"><?= $hilfeOeffentlich ? 'Nur für angemeldete Konten' : 'Für alle freigeben (ohne Anmeldung)' ?></button></p>
+    </form>
+  </section>
+
 </main>

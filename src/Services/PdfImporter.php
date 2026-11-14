@@ -134,9 +134,14 @@ final class PdfImporter
         (new Kursangebot($this->db))->forJahrgang($info['jahrgang']);
 
         $loginKey = LoginName::fromName($info['name']);
+        // Gleicher Name, andere Schüler-ID: vermutlich zwei Personen. Die jüngere PDF würde sonst unbemerkt die andere ersetzen.
+        $otherId = $info['schueler_id'] === '' ? null : $this->db->fetchValue(
+            "SELECT schueler_id FROM school_pdfs WHERE login_key = ? AND schueler_id <> '' AND schueler_id <> ? LIMIT 1",
+            [$loginKey, $info['schueler_id']],
+        );
         $userId = $this->db->fetchValue('SELECT id FROM users WHERE login = ? AND role = ?', [$loginKey, 'student']);
 
-        return $this->db->transaction(function (Database $db) use ($info, $data, $hash, $filename, $source, $loginKey, $userId, $storeName): bool {
+        return $this->db->transaction(function (Database $db) use ($info, $data, $hash, $filename, $source, $loginKey, $userId, $storeName, $otherId): bool {
             $db->run(
                 'INSERT INTO school_pdfs (user_id, login_key, name, klasse, jahrgang, schueler_id, abitur_jahrgang_id,
                      pdf_created_at, filename, sha256, size_bytes, pdf, active)
@@ -149,6 +154,9 @@ final class PdfImporter
             $active = (int) $db->fetchValue('SELECT active FROM school_pdfs WHERE id = ?', [$id]) === 1;
 
             $who = $info['name'] . ($userId !== null ? " → {$loginKey}" : " (kein Konto {$loginKey})");
+            if ($otherId !== null) {
+                $who .= ". Achtung: Für {$loginKey} liegt schon eine PDF mit anderer Schüler-ID vor ({$otherId} statt {$info['schueler_id']}), vermutlich zwei Personen mit gleichem Namen. Bitte die Zuordnung prüfen";
+            }
             if (!$active) {
                 $this->log($source, $filename, 'importiert', "{$who}; älter als die vorhandene PDF, nicht aktiv.", $id);
             } else {

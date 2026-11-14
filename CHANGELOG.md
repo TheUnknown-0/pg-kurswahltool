@@ -4,6 +4,18 @@ Neue Einträge oben. Format: `## Version – Datum`, darunter Stichpunkte mit `-
 Bei jeder Änderung auf `main` die Nummer in `VERSION` erhöhen (Fehlerbehebung 1.0.1, neue Funktion 1.1.0),
 sonst merken die laufenden Installationen nichts vom Update.
 
+## 1.2.0 – 2026-11-14
+
+- Hilfeseite `/hilfe` ist standardmäßig nur nach Anmeldung erreichbar. Unter „Einstellungen“ kann der Admin sie für alle freigeben; dann steht der Link auch wieder auf der Anmeldeseite. Jede Umstellung steht im Protokoll.
+- Künstlerisches Fach: Die Belegpflicht entfällt nur, wenn die zweite Fremdsprache erst in Klasse 10 begonnen wurde (§ 25 Abs. 2 VO-GO). Eine neu begonnene dritte Fremdsprache befreit nicht mehr.
+- Sport als 4. Prüfungsfach: Neben einem Kurs Sporttheorie zählen drei Kurse Sportpraxis zu den einbringpflichtigen Kursen (§ 13 Abs. 5 VO-GO).
+- Jahreswochenstunden: Grundkurse einer in Klasse 10 neu begonnenen Fremdsprache zählen mit vier Stunden (§ 20 Abs. 1 VO-GO).
+- Schuljahre im Übersichtsplan und im Datei-Export richten sich nach dem Abiturjahrgang statt nach einer festen Angabe; ohne Jahrgang gilt die nächste Qualifikationsphase.
+- CSV-Export: Werte, die Excel als Formel lesen würde, werden als Text geschrieben.
+- Formular-Export lädt die PDFs einzeln nach und braucht weniger Speicher.
+- Import: Hinweis im Protokoll, wenn für denselben Namen schon eine PDF mit anderer Schüler-ID vorliegt (vermutlich zwei Personen mit gleichem Namen).
+- Regeltests für den Planer (`tools/test_regeln.js`), `.gitattributes` hält Shell-Skripte auf LF.
+
 ## 1.1.0 – 2026-11-12
 
 - Neue Unterseite „Hilfe zur Kurswahl“ (`/hilfe`, ohne Anmeldung): Leitfaden mit Erklärvideo, Untertiteln und Kapiteln, Fächertabelle, Belegpflichten, Rechner, Beispielwahl, Stolperfallen und Checkliste. Verlinkt im Planer und auf der Anmeldeseite.

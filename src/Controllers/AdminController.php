@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\HttpException;
 use App\Services\AdminLog;
 use App\Services\Deadline;
+use App\Services\HilfeSetting;
 use App\Services\LoginName;
 use App\Services\PlanerPage;
 use App\Services\SchoolPdfPatcher;
@@ -281,6 +282,19 @@ final class AdminController extends Controller
         return $this->redirect('/admin/einstellungen');
     }
 
+    /** Hilfeseite /hilfe für alle freigeben oder auf angemeldete Konten beschränken. */
+    public function saveHilfe(): string
+    {
+        $this->ctx->auth->requireAdmin();
+        $this->verifyCsrf();
+        $public = ($_POST['oeffentlich'] ?? '') === '1';
+        (new HilfeSetting($this->ctx->db))->setPublic($public);
+        AdminLog::add($this->ctx, 'hilfe', $public ? 'für alle' : 'nur angemeldet');
+        $this->ctx->session->flash('ok', $public ? 'Die Hilfeseite ist jetzt ohne Anmeldung erreichbar.' : 'Die Hilfeseite ist jetzt nur nach Anmeldung erreichbar.');
+
+        return $this->redirect('/admin/einstellungen#hilfe');
+    }
+
     /** Planer mit der Wahl des Schülers, nur lesend. */
     public function viewStudent(array $p): string
     {
@@ -361,11 +375,13 @@ final class AdminController extends Controller
         $this->ctx->auth->requireAdmin();
         $nur = (string) ($_GET['nur'] ?? '');
         $where = 'p.id IS NOT NULL' . ($nur === 'abgegeben' ? ' AND s.submitted_at IS NOT NULL' : '');
-        $rows = $this->formRows($where, []);
+        // Die PDFs einzeln nachladen statt alle auf einmal mit der Liste: halbiert den Speicherbedarf des Exports
+        $rows = $this->formRows($where, [], false);
         $files = [];
         $used = [];
         $notes = [];
         foreach ($rows as $r) {
+            $r['pdf'] = $this->ctx->db->fetchValue('SELECT pdf FROM school_pdfs WHERE id = ?', [$r['pdf_id']]);
             try {
                 [$bytes, $note] = $this->filledPdf($r);
             } catch (\Throwable $e) {
@@ -441,7 +457,7 @@ final class AdminController extends Controller
             $sum = is_array($sum) ? $sum : [];
             $roles = is_array($sum['roles'] ?? null) ? $sum['roles'] : [];
             $q = is_array($sum['sems'] ?? null) ? $sum['sems'] : [];
-            fputcsv($out, array_map(static fn (mixed $v): string => is_scalar($v) ? (string) $v : '', [
+            fputcsv($out, array_map(self::csvCell(...), [
                 $r['login'], $r['name'] ?? $r['display_name'], $r['klasse'] ?? '', $r['schueler_id'] ?? '',
                 $r['submitted_at'] ? 'abgegeben' : ($r['updated_at'] ? 'gespeichert' : 'keine Wahl'),
                 $d($r['submitted_at']), $d($r['updated_at']),
@@ -454,6 +470,17 @@ final class AdminController extends Controller
         rewind($out);
 
         return (string) stream_get_contents($out);
+    }
+
+    /**
+     * Zelle für den CSV-Export. Teile der Kurzfassung kommen aus dem Browser des Schülers: Beginnt ein Wert
+     * mit =, +, -, @, Tab oder Wagenrücklauf, würde Excel ihn als Formel ausführen. Ein Apostroph davor macht ihn zu Text.
+     */
+    private static function csvCell(mixed $v): string
+    {
+        $s = is_scalar($v) ? (string) $v : '';
+
+        return preg_match('/^[=+\-@\t\r]/', $s) === 1 ? "'" . $s : $s;
     }
 
     /** Content-Disposition mit ASCII-Ersatz und UTF-8-Dateiname (RFC 6266) */
@@ -486,6 +513,7 @@ final class AdminController extends Controller
             'flashes' => $this->ctx->session->pullFlashes(),
             'deadline' => (new Deadline($this->ctx->db))->settings(),
             'deadlineModes' => Deadline::MODES,
+            'hilfeOeffentlich' => (new HilfeSetting($this->ctx->db))->isPublic(),
         ]);
     }
 
@@ -527,10 +555,12 @@ final class AdminController extends Controller
     }
 
     /** @return list<array<string, mixed>> */
-    private function formRows(string $where, array $params): array
+    private function formRows(string $where, array $params, bool $withPdf = true): array
     {
+        $pdf = $withPdf ? 'p.pdf' : 'NULL AS pdf';
+
         return $this->ctx->db->fetchAll(
-            "SELECT u.id, u.login, p.pdf, p.filename, s.summary, s.state
+            "SELECT u.id, u.login, p.id AS pdf_id, {$pdf}, p.filename, s.summary, s.state
              FROM users u
              LEFT JOIN school_pdfs p ON p.user_id = u.id AND p.active = 1
              LEFT JOIN selections s ON s.user_id = u.id

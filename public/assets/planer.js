@@ -26,11 +26,15 @@ const SUBJECTS = [
 const AF_NAMES = {1:'Aufgabenfeld I – sprachlich-literarisch-künstlerisch',2:'Aufgabenfeld II – gesellschaftswissenschaftlich',3:'Aufgabenfeld III – mathematisch-naturwissenschaftlich-technisch',0:'Keinem Aufgabenfeld zugeordnet'};
 const ROLES = [['lk1','1. LK'],['lk2','2. LK'],['pf3','3. PF'],['pf4','4. PF'],['pk5','5. PK']];
 const ROLE_LABEL = Object.fromEntries(ROLES);
-const SCHULJAHRE = ['2026/27','2027/28']; // Q1/Q2 und Q3/Q4 – bei jeder Kurswahl anpassen
+// Schuljahre Q1/Q2 und Q3/Q4 ohne Jahrgangsangabe: die nächste Qualifikationsphase (Wechsel im August)
+const sjText = y => `${y}/${String((y+1)%100).padStart(2,'0')}`;
+const SCHULJAHRE_STD = (()=>{ const n=new Date(), y=n.getMonth()>=7 ? n.getFullYear()+1 : n.getFullYear(); return [sjText(y), sjText(y+1)]; })();
 // Zusätzliche Geschichte (anderes AF-II-Fach durchgängig): § 25 Abs. 3 VO-GO verlangt die Kurse 1 und 2,
 // § 49 Abs. 11 lässt für das Abitur bis 2027/28 noch die alte Fassung (Kurse 3 und 4) gelten.
-// Maßgeblich ist der Jahrgang „Abitur JJJJ/JJ“; ohne Angabe gilt der Jahrgang aus SCHULJAHRE.
-const abiJahr = () => { const m=/^Abitur (\d{4})\/\d{2}/.exec((st.jahrgang||'').trim()); return m ? +m[1] : parseInt(SCHULJAHRE[1],10); };
+// Maßgeblich ist der Jahrgang „Abitur JJJJ/JJ“; ohne Angabe gilt die nächste Qualifikationsphase (SCHULJAHRE_STD).
+const abiJahr = () => { const m=/^Abitur (\d{4})\/\d{2}/.exec((st.jahrgang||'').trim()); return m ? +m[1] : parseInt(SCHULJAHRE_STD[1],10); };
+// Schuljahre [Q1/Q2, Q3/Q4] passend zum eingetragenen Abiturjahrgang
+const schuljahre = () => { const y=abiJahr(); return [sjText(y-1), sjText(y)]; };
 const geNeu = () => abiJahr() >= 2028;
 const geQ = () => geNeu() ? [0,1] : [2,3];
 const LANG_OPTS = [['none','nicht belegt'],['early','ab Klasse 5–7'],['mid','ab Klasse 8–9'],['new','neu ab Klasse 10']];
@@ -274,7 +278,9 @@ function mergedSems(pred){ // OR over subjects matching pred
 }
 const geSems = () => mergedSems(s=>s.ge);
 const pwSems = () => mergedSems(s=>s.pw);
-const kfExempt = () => Object.values(st.langs).includes('new');
+// § 25 Abs. 2 VO-GO: Das künstlerische Fach entfällt nur, wenn die ZWEITE Fremdsprache erst in Klasse 10
+// begonnen wurde. Eine neu begonnene dritte oder vierte Fremdsprache (§ 10 Abs. 4) befreit nicht.
+const kfExempt = () => { const v=Object.values(st.langs); return v.includes('new') && v.filter(x=>x==='early'||x==='mid').length<=1; };
 const sportOff = () => st.meta.befreit;
 const sportRole = () => st.roles.pf4==='spo' || st.roles.pk5==='spo';
 // 2. Fremdsprache erst ab Klasse 8/9 begonnen (und keine 2. FS ab Kl. 5–7): Belegpflicht bis Ende Q2
@@ -414,7 +420,7 @@ function evaluate(){
   if(!kfExempt()){
     const kf=SUBJECTS.filter(s=>s.kf).some(s=>(sems(s.id)[0]&&sems(s.id)[1])||(sems(s.id)[2]&&sems(s.id)[3]));
     ok(kf, 'Künstlerisches Fach (Musik, Kunst oder DS): zwei Kurse in Q1+Q2 oder Q3+Q4', G2);
-  } else add('info','Künstlerisches Fach: entfällt, weil du eine Fremdsprache neu ab Klasse 10 begonnen hast',G2);
+  } else add('info','Künstlerisches Fach: entfällt, weil du deine zweite Fremdsprache erst in Klasse 10 begonnen hast (§ 25 Abs. 2 VO-GO)',G2);
 
   if(!sportOff()){
     const chosen=st.sport.filter(Boolean);
@@ -446,7 +452,9 @@ function evaluate(){
   const sportCourses=sportOff()?0:st.sport.filter(Boolean).length;
   const zCourses=Object.values(st.zusatz).reduce((a,arr)=>a+arr.filter(Boolean).length,0);
   const total=lkCourses+gkCourses+theo+sportCourses+zCourses;
-  const hours=(lkCourses*5 + (gkCourses+theo+zCourses)*3 + sportCourses*2)/2;
+  // § 20 Abs. 1 VO-GO: Der Grundkurs einer in Klasse 10 neu begonnenen Fremdsprache hat vier statt drei Wochenstunden
+  const neuFsCourses=SUBJECTS.filter(s=>s.lang&&st.langs[s.id]==='new'&&!isLK(s.id)).reduce((a,s)=>a+cnt(s.id),0);
+  const hours=(lkCourses*5 + (gkCourses+theo+zCourses)*3 + neuFsCourses + sportCourses*2)/2;
   const minK=40; // auch bei Sportbefreiung
   ok(total>=minK, `Mindestens ${minK} Kurse belegt (aktuell ${total})`, G3);
   ok(hours>=66, `Mindestens 66 Jahreswochenstunden (aktuell ${hours})`, G3);
@@ -471,6 +479,8 @@ function evaluate(){
   }
   if(roles.pk5 && roles.pk5!=='spo'){ put(roles.pk5,3); }
   if(sportRole()){ if(sems('spt')[3]) E.add('spt:3'); }
+  // § 13 Abs. 5 Nr. 1 und 3 VO-GO: Ist Sport Prüfungsfach, sind neben einem Kurs Sporttheorie drei Kurse Sportpraxis einzubringen
+  if(roles.pf4==='spo' && !sportOff()){ st.sport.map((c,i)=>c?i:-1).filter(i=>i>=0).slice(0,3).forEach(i=>E.add('spo:'+i)); }
   const einbring=E.size;
   ok(einbring<=24, `Höchstens 24 einbringpflichtige Grundkurse (aktuell ${einbring}); es müssen genau 24 eingebracht werden`, G3);
   if(einbring<24 && einbring>0) add('info',`${24-einbring} weitere Grundkurse kannst du frei zum Einbringen wählen`,G3);
@@ -701,7 +711,7 @@ function renderPrint(){
 
   const page1=`<div class="pv-page">
     <div class="pv-head">
-      <div><h1>Übersichtsplan Qualifikationsphase</h1><div class="school">Paulsen-Gymnasium Berlin · Schuljahre ${SCHULJAHRE[0]} (Q1/Q2) und ${SCHULJAHRE[1]} (Q3/Q4)</div></div>
+      <div><h1>Übersichtsplan Qualifikationsphase</h1><div class="school">Paulsen-Gymnasium Berlin · Schuljahre ${schuljahre()[0]} (Q1/Q2) und ${schuljahre()[1]} (Q3/Q4)</div></div>
       <div class="pv-meta"><span>Zeile (Tabelle der Wahlmöglichkeiten):</span><span class="pv-fill">&nbsp;</span><span>Zweitfach der Präsentation:</span><span class="pv-fill">&nbsp;</span></div>
     </div>
     <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:8mm;margin-bottom:2mm;align-items:end">
@@ -816,7 +826,7 @@ function showIo(text, kind){
   clearTimeout(showIo.t); showIo.t=setTimeout(()=>{m.hidden=true;}, 7000);
 }
 $('#export').onclick=()=>{
-  const data={app:EXPORT_APP, version:EXPORT_VERSION, exportiert:new Date().toISOString(), schuljahre:SCHULJAHRE, planer:st};
+  const data={app:EXPORT_APP, version:EXPORT_VERSION, exportiert:new Date().toISOString(), schuljahre:schuljahre(), planer:st};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const safe=(st.name||'').trim().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');
   const a=document.createElement('a');
@@ -869,7 +879,7 @@ $('#importfile').onchange=async e=>{
   if(hasData && !confirm(`Die Kurswahl${who} laden? Deine aktuellen Eingaben werden dabei ersetzt.`)) return;
   st=sanitizeImport(data.planer);
   syncControls(); update();
-  const hint = Array.isArray(data.schuljahre) && data.schuljahre.join()!==SCHULJAHRE.join() ? ` Achtung: Die Datei wurde für die Schuljahre ${data.schuljahre.join(' und ')} erstellt.` : '';
+  const hint = Array.isArray(data.schuljahre) && data.schuljahre.join()!==schuljahre().join() ? ` Achtung: Die Datei wurde für die Schuljahre ${data.schuljahre.join(' und ')} erstellt.` : '';
   showIo(`Kurswahl${who} geladen.${hint}`, hint?'warn':'ok');
 };
 

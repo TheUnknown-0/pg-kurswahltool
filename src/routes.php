@@ -16,7 +16,7 @@ return static function (Router $r): void {
     $r->get('/healthz', [HealthController::class, 'healthz']);
     $r->get('/readyz', [HealthController::class, 'readyz']);
 
-    // Hilfe zur Kurswahl (Leitfaden und Erklärvideo), ohne Anmeldung
+    // Hilfe zur Kurswahl (Leitfaden und Erklärvideo): nur angemeldet, außer der Admin gibt sie frei
     $r->get('/hilfe', [HilfeController::class, 'index']);
 
     $r->get('/login', [AuthController::class, 'form']);
@@ -43,6 +43,7 @@ return static function (Router $r): void {
     $r->post('/admin/pdfs/{id}/delete', [AdminController::class, 'deletePdf']);
     $r->get('/admin/pdfs/{id}', [AdminController::class, 'downloadPdf']);
     $r->post('/admin/settings', [AdminController::class, 'saveSettings']);
+    $r->post('/admin/settings/hilfe', [AdminController::class, 'saveHilfe']);
     $r->get('/admin/jahrgaenge', [JahrgaengeController::class, 'index']);
     $r->post('/admin/jahrgaenge/pflicht', [JahrgaengeController::class, 'savePflicht']);
     $r->post('/admin/jahrgaenge/angebot', [JahrgaengeController::class, 'saveAngebot']);

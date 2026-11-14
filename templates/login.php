@@ -11,6 +11,8 @@
       <input type="password" id="password" name="password" autocomplete="current-password" required>
       <button class="btn primary" type="submit">Anmelden</button>
     </form>
+    <?php if (!empty($hilfeOeffentlich)): ?>
     <p class="help-hint"><a href="<?= e($ctx->url('/hilfe')) ?>">Hilfe und Erklärvideo zur Kurswahl</a></p>
+    <?php endif; ?>
   </div>
 </main>
